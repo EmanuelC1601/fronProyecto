@@ -1,0 +1,39 @@
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card border-danger shadow-lg">
+        <div class="card-body p-5 text-center">
+          <div class="error-icon mb-4">
+            <i class="bi bi-exclamation-octagon text-danger" style="font-size: 5rem;"></i>
+          </div>
+          
+          <h1 class="display-5 text-danger mb-4">¡Ups! Algo salió mal</h1>
+          
+          <div class="error-message p-4 bg-light rounded mb-4">
+            <p class="lead">
+              <i class="bi bi-chat-quote text-primary me-2"></i>
+              <strong>Lo sentimos, por el momento este apartado no está funcionando</strong>
+            </p>
+            <p class="mb-0">
+              Pero <span class="text-primary fw-bold">ECC</span> está trabajando para solucionarlo.
+            </p>
+          </div>
+          
+          <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            Puedes intentar nuevamente más tarde o contactar al soporte técnico.
+          </div>
+          
+          <div class="mt-5">
+            <button class="btn btn-primary me-3" routerLink="/">
+              <i class="bi bi-house me-1"></i> Volver al Inicio
+            </button>
+            <button class="btn btn-outline-secondary" (click)="goBack()">
+              <i class="bi bi-arrow-left me-1"></i> Regresar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,212 @@
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card shadow">
+        <div class="card-header bg-success text-white">
+          <h3 class="mb-0">
+            <i class="bi bi-person-plus me-2"></i>Registro de Usuario
+          </h3>
+        </div>
+        
+        <div class="card-body p-4">
+          <!-- Mensaje de éxito -->
+          <div *ngIf="showSuccess" class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            <strong>¡Registro exitoso!</strong> El usuario ha sido registrado correctamente en la base de datos.
+            <button type="button" class="btn-close" (click)="showSuccess = false"></button>
+          </div>
+
+          <!-- Mensaje de error -->
+          <div *ngIf="showError" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <strong>Error:</strong> {{ errorMessage }}
+            <button type="button" class="btn-close" (click)="showError = false"></button>
+          </div>
+
+          <!-- Información de contraseñas automáticas -->
+          <div class="alert alert-warning mb-4">
+            <div class="d-flex">
+              <i class="bi bi-key-fill me-2"></i>
+              <div>
+                <strong>Contraseñas automáticas:</strong>
+                <p class="mb-0 small">
+                  Las contraseñas se generan automáticamente. Se mostrará la contraseña generada después del registro exitoso.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Información de validación -->
+          <div class="alert alert-info mb-4">
+            <div class="d-flex">
+              <i class="bi bi-info-circle-fill me-2"></i>
+              <div>
+                <strong>Requisitos de validación:</strong>
+                <ul class="mb-0 mt-1 small">
+                  <li><strong>Nombre:</strong> Solo letras, máximo 12 letras (sin espacios) y 3 palabras</li>
+                  <li><strong>Fecha de nacimiento:</strong> Obligatoria, debe ser una fecha válida</li>
+                  <li><strong>Contraseña:</strong> Se genera automáticamente (12 caracteres)</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" novalidate>
+            <!-- Campo Nombre -->
+            <div class="mb-4">
+              <label for="nombre" class="form-label">
+                <i class="bi bi-person-circle me-1"></i>Nombre Completo *
+              </label>
+              <input 
+                type="text" 
+                id="nombre" 
+                formControlName="nombre"
+                class="form-control" 
+                [class.is-invalid]="f['nombre'].invalid && (f['nombre'].touched || f['nombre'].dirty)"
+                placeholder="Ej: Juan Pérez Rodríguez"
+                autocomplete="name"
+                (input)="formatearNombre($event)">
+              
+              <div class="form-text small">
+                Solo letras (incluye acentos y ñ). Máximo 12 letras (sin contar espacios) y 3 palabras.
+                <span *ngIf="f['nombre'].value" class="ms-2" [ngClass]="getColorContador()">
+                  <i class="bi bi-info-circle"></i>
+                  Letras usadas: {{ letrasUsadas }}/12
+                </span>
+              </div>
+              
+              <div *ngIf="f['nombre'].invalid && (f['nombre'].touched || f['nombre'].dirty)" class="invalid-feedback">
+                <div *ngIf="f['nombre'].errors?.['required']">
+                  <i class="bi bi-x-circle me-1"></i>El nombre es requerido
+                </div>
+                <div *ngIf="f['nombre'].errors?.['minlength']">
+                  <i class="bi bi-x-circle me-1"></i>Mínimo 2 caracteres
+                </div>
+                <div *ngIf="f['nombre'].errors?.['maxlength']">
+                  <i class="bi bi-x-circle me-1"></i>Máximo 50 caracteres totales
+                </div>
+                <div *ngIf="f['nombre'].errors?.['soloLetras']">
+                  <i class="bi bi-x-circle me-1"></i>Solo se permiten letras y espacios (no números ni caracteres especiales)
+                </div>
+                <div *ngIf="f['nombre'].errors?.['espaciosExtremos']">
+                  <i class="bi bi-x-circle me-1"></i>No debe tener espacios al inicio ni al final
+                </div>
+                <div *ngIf="f['nombre'].errors?.['maxPalabras']">
+                  <i class="bi bi-x-circle me-1"></i>Máximo {{ f['nombre'].errors?.['maxPalabras'].max }} palabras (tienes {{ f['nombre'].errors?.['maxPalabras'].actual }})
+                </div>
+                <div *ngIf="f['nombre'].errors?.['maxLetras']">
+                  <i class="bi bi-x-circle me-1"></i>Máximo {{ f['nombre'].errors?.['maxLetras'].max }} letras (sin contar espacios). Tienes {{ f['nombre'].errors?.['maxLetras'].actual }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Campo Fecha de Nacimiento -->
+            <div class="mb-4">
+              <label for="fechaNacimiento" class="form-label">
+                <i class="bi bi-calendar-event me-1"></i>Fecha de Nacimiento *
+              </label>
+              <input 
+                type="date" 
+                id="fechaNacimiento" 
+                formControlName="fechaNacimiento"
+                class="form-control" 
+                [class.is-invalid]="f['fechaNacimiento'].invalid && (f['fechaNacimiento'].touched || f['fechaNacimiento'].dirty)"
+                autocomplete="bday"
+                [max]="today | date:'yyyy-MM-dd'">
+              
+              <div *ngIf="f['fechaNacimiento'].invalid && (f['fechaNacimiento'].touched || f['fechaNacimiento'].dirty)" class="invalid-feedback">
+                <div *ngIf="f['fechaNacimiento'].errors?.['required']">
+                  <i class="bi bi-x-circle me-1"></i>La fecha de nacimiento es requerida
+                </div>
+                <div *ngIf="f['fechaNacimiento'].errors?.['invalidDate']">
+                  <i class="bi bi-x-circle me-1"></i>{{ f['fechaNacimiento'].errors?.['invalidDate'] }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Botones -->
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4 pt-3 border-top">
+              <button 
+                type="button" 
+                class="btn btn-outline-secondary me-md-2"
+                (click)="limpiarFormulario()"
+                [disabled]="isSubmitting">
+                <i class="bi bi-eraser me-1"></i>Limpiar Formulario
+              </button>
+              
+              <button 
+                type="submit" 
+                class="btn btn-success btn-lg"
+                [disabled]="registerForm.invalid || isSubmitting">
+                <span *ngIf="!isSubmitting">
+                  <i class="bi bi-person-plus me-1"></i>Registrar Usuario
+                </span>
+                <span *ngIf="isSubmitting">
+                  <span class="spinner-border spinner-border-sm me-1"></span>
+                  Registrando...
+                </span>
+              </button>
+            </div>
+          </form>
+
+          <!-- Información adicional -->
+          <div class="mt-5 pt-4 border-top">
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <div class="card border-info h-100">
+                  <div class="card-body">
+                    <h6 class="card-title text-info">
+                      <i class="bi bi-info-circle me-1"></i>Ejemplos Válidos
+                    </h6>
+                    <p class="card-text small">
+                      <strong>Nombres:</strong><br>
+                      • "Ana" (3 letras)<br>
+                      • "Juan Pérez" (8 letras, 2 palabras)<br>
+                      • "María López" (10 letras, 2 palabras)<br>
+                      • "Carlos José" (10 letras, 2 palabras)
+                    </p>
+                    <p class="card-text small mb-0">
+                      <strong>Fechas:</strong><br>
+                      • 2000-01-01<br>
+                      • 1995-12-31<br>
+                      • 1980-06-15
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <div class="card border-warning h-100">
+                  <div class="card-body">
+                    <h6 class="card-title text-warning">
+                      <i class="bi bi-x-circle me-1"></i>Ejemplos No Válidos
+                    </h6>
+                    <p class="card-text small">
+                      <strong>Nombres incorrectos:</strong><br>
+                      • "Juan123" (contiene números)<br>
+                      • "María-López" (contiene guión)<br>
+                      • "Ana María López Rodríguez" (4 palabras)<br>
+                      • "Supercalifragilistico" (más de 12 letras)
+                    </p>
+                    <p class="card-text small mb-0">
+                      <strong>Fechas incorrectas:</strong><br>
+                      • Fechas futuras<br>
+                      • Menores de 13 años<br>
+                      • Fechas inválidas
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card-footer bg-light">
+          <div class="text-center small text-muted">
+            <i class="bi bi-clock-history me-1"></i>
+            Sistema de registro validado - {{today | date:'dd/MM/yyyy HH:mm'}}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

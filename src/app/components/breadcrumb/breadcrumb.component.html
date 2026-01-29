@@ -1,0 +1,19 @@
+<nav aria-label="breadcrumb" *ngIf="(breadcrumbs$ | async)?.length">
+  <ol class="breadcrumb mb-0">
+    <li class="breadcrumb-item">
+      <a routerLink="/" class="text-decoration-none">
+        <i class="bi bi-house-door me-1"></i>Inicio
+      </a>
+    </li>
+    <ng-container *ngFor="let breadcrumb of breadcrumbs$ | async; let last = last">
+      <li class="breadcrumb-item" [class.active]="last" [attr.aria-current]="last ? 'page' : null">
+        <a *ngIf="!last" [routerLink]="breadcrumb.url" class="text-decoration-none">
+          {{ breadcrumb.label }}
+        </a>
+        <span *ngIf="last" class="text-primary fw-semibold">
+          {{ breadcrumb.label }}
+        </span>
+      </li>
+    </ng-container>
+  </ol>
+</nav>
