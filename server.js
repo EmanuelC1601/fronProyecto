@@ -1,31 +1,63 @@
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const app = express();
 
-const distPath = path.join(__dirname, 'dist/proyecto-angular-completo1');
+// Verificar múltiples rutas posibles
+const possiblePaths = [
+  path.join(__dirname, 'dist/proyecto-angular-completo1'),
+  path.join(__dirname, 'dist/proyecto-angular-completo1/browser'),
+  path.join(__dirname, 'dist')
+];
 
-// Middleware para verificar si la ruta existe
-app.use((req, res, next) => {
-  console.log('Solicitud recibida para:', req.url);
-  console.log('Buscando en la ruta:', distPath);
-  next();
-});
+let distPath = null;
+for (const possiblePath of possiblePaths) {
+  const indexPath = path.join(possiblePath, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    distPath = possiblePath;
+    console.log(`✅ Encontrado index.html en: ${indexPath}`);
+    break;
+  }
+}
 
-app.use(express.static(distPath));
-
-app.get('*', (req, res) => {
-  const indexPath = path.join(distPath, 'index.html');
-  console.log('Intentando enviar index.html desde:', indexPath);
-  res.sendFile(indexPath, (err) => {
-    if (err) {
-      console.error('Error al enviar index.html:', err);
-      res.status(500).send('Error interno del servidor');
-    }
+if (!distPath) {
+  console.error('❌ ERROR: No se encontró index.html en ninguna ruta');
+  console.log('Buscando archivos en:', __dirname);
+  
+  // Listar contenido del directorio
+  const listFiles = (dir, prefix = '') => {
+    const items = fs.readdirSync(dir);
+    items.forEach(item => {
+      const itemPath = path.join(dir, item);
+      const stat = fs.statSync(itemPath);
+      console.log(`${prefix}${item}${stat.isDirectory() ? '/' : ''}`);
+      if (stat.isDirectory() && !item.includes('node_modules')) {
+        listFiles(itemPath, prefix + '  ');
+      }
+    });
+  };
+  
+  listFiles(__dirname);
+  
+  // Crear una respuesta de error temporal
+  app.get('*', (req, res) => {
+    res.status(500).send(`
+      <h1>Error: Aplicación no construida</h1>
+      <p>El archivo index.html no se encontró en dist/</p>
+      <p>Verifica los logs de build en Render</p>
+    `);
   });
-});
+} else {
+  // Servir archivos estáticos
+  app.use(express.static(distPath));
+  
+  // Todas las rutas redirigen a index.html
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
 
-const port = process.env.PORT || 8080;
+const port = process.env.PORT || 10000;
 app.listen(port, () => {
   console.log(`✅ Servidor Express escuchando en el puerto ${port}`);
-  console.log(`Ruta de archivos estáticos: ${distPath}`);
 });
