@@ -42,7 +42,7 @@ export interface Imagen {
 })
 export class ApiService {
   // ✅ URL CORRECTA: Tu backend en Render
-  private baseUrl = 'https://backend-bhit.onrender.com';
+  private baseUrl = 'https://backend-bhit.onrender.com/api';
   
   private httpOptions = {
     headers: new HttpHeaders({
