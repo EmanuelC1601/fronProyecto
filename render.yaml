@@ -1,18 +1,12 @@
 services:
   - type: web
-    name: eecangular
+    name: proyecto-angular-completo1
     env: node
     buildCommand: |
-      echo "Instalando dependencias..."
-      npm install
-      echo "Construyendo aplicación Angular..."
+      npm install --legacy-peer-deps
       npm run build
-      echo "Verificando build..."
-      ls -la dist/proyecto-angular-completo1 || echo "No se encontró dist/"
-      find . -name "index.html" | head -5
     startCommand: npm start
     envVars:
       - key: NODE_VERSION
         value: 18.17.0
     healthCheckPath: /
-    autoDeploy: true
