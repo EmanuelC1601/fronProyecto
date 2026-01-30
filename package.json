@@ -4,10 +4,11 @@
   "scripts": {
     "ng": "ng",
     "start": "node server.js",
-    "build": "ng build --configuration production --output-path=dist/proyecto-angular-completo1",
-    "prebuild": "echo 'Iniciando construcción...' && rm -rf dist/ 2>/dev/null || true",
-    "postbuild": "echo 'Construcción completada. Contenido de dist:' && ls -la dist/ || echo 'No se encontró dist'",
-    "dev": "ng serve",
+    "build": "ng build --configuration production --output-hashing=all --output-path=dist/proyecto-angular-completo1",
+    "prebuild": "echo '🚀 Starting Angular build...' && rm -rf dist/ 2>/dev/null || true",
+    "postbuild": "echo '✅ Build completed!' && if [ -d 'dist/proyecto-angular-completo1' ]; then echo 'Contents of dist:' && ls -la dist/proyecto-angular-completo1/; else echo '❌ No build output found'; fi",
+    "render-build": "npm install --legacy-peer-deps && npm run build",
+    "dev": "ng serve --port 4200",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },
