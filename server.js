@@ -4,16 +4,8 @@ const fs = require('fs');
 
 const app = express();
 
-// Function to check if index.html exists in a given path
-function findIndexHtml(dir) {
-  const indexPath = path.join(dir, 'index.html');
-  if (fs.existsSync(indexPath)) {
-    return dir;
-  }
-  return null;
-}
-
-// Possible paths for the built Angular app
+// Posibles rutas donde podría estar el build de Angular
+// Angular 16+ genera una subcarpeta 'browser' dentro del outputPath
 const possiblePaths = [
   path.join(__dirname, 'dist/proyecto-angular-completo1/browser'),
   path.join(__dirname, 'dist/proyecto-angular-completo1'),
@@ -22,59 +14,42 @@ const possiblePaths = [
 
 let distPath = null;
 
+// Buscar la primera ruta que contenga index.html
 for (const possiblePath of possiblePaths) {
-  distPath = findIndexHtml(possiblePath);
-  if (distPath) {
+  const indexPath = path.join(possiblePath, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    distPath = possiblePath;
     break;
   }
 }
 
-if (!distPath) {
-  console.error('Could not find the built Angular app.');
-  console.log('Searched in the following paths:');
-  possiblePaths.forEach(p => console.log('  - ' + p));
-  
-  // List the current directory structure for debugging
-  console.log('Current directory structure:');
-  function listDir(dir, indent) {
-    const files = fs.readdirSync(dir);
-    files.forEach(file => {
-      const filePath = path.join(dir, file);
-      const stat = fs.statSync(filePath);
-      console.log(indent + file + (stat.isDirectory() ? '/' : ''));
-      if (stat.isDirectory() && file !== 'node_modules' && file !== '.git') {
-        listDir(filePath, indent + '  ');
-      }
-    });
-  }
-  try {
-    listDir(__dirname, '  ');
-  } catch (e) {
-    console.error('Error listing directory:', e.message);
-  }
+if (distPath) {
+  console.log(`Sirviendo archivos estáticos desde: ${distPath}`);
+  app.use(express.static(distPath));
+
+  // Para una SPA de Angular, todas las rutas deben redirigir a index.html
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+} else {
+  // Si no se encuentra el build, mostrar un error detallado
+  console.error('No se encontró el build de Angular. Las rutas verificadas fueron:');
+  possiblePaths.forEach(p => console.error(`  - ${p}`));
 
   app.get('*', (req, res) => {
     res.status(500).send(`
-      <h1>Error: Application not built</h1>
-      <p>The built Angular application was not found in the expected location.</p>
-      <p>Please check the build logs on Render. The build command must include 'npm run build'.</p>
-      <p>Current directory: ${__dirname}</p>
-      <p>Searched paths:</p>
-      <ul>
-        ${possiblePaths.map(p => `<li>${p}</li>`).join('')}
-      </ul>
+      <h1>Error: Aplicación no construida</h1>
+      <p>No se encontró la carpeta de construcción de Angular. Asegúrate de que:</p>
+      <ol>
+        <li>El comando de construcción (build) se ejecutó correctamente en Render.</li>
+        <li>El comando de construcción genera la carpeta 'dist' con el index.html.</li>
+      </ol>
+      <p>Consulta los logs de construcción en Render para más detalles.</p>
     `);
-  });
-} else {
-  console.log(`Serving static files from ${distPath}`);
-  app.use(express.static(distPath));
-
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(distPath, 'index.html'));
   });
 }
 
 const port = process.env.PORT || 10000;
 app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+  console.log(`Servidor escuchando en el puerto ${port}`);
 });
