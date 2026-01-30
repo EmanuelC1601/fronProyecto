@@ -21,7 +21,7 @@ export class InsertDataComponent implements OnInit {
   todayDate = new Date();
   
   // Google reCAPTCHA site key (clave de prueba)
-  readonly siteKey = '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI';
+  readonly siteKey = '6LeGq1osAAAAAGy_pTD_MCTXnuoyV7CnooZu0qoL';
 
   constructor(
     private fb: FormBuilder,
