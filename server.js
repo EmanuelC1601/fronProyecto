@@ -1,11 +1,12 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-
 const app = express();
 
-// Posibles rutas donde podría estar el build de Angular
-// Angular 16+ genera una subcarpeta 'browser' dentro del outputPath
+console.log('=== SERVER STARTING ===');
+console.log('Current directory:', __dirname);
+
+// Solo busca en estas rutas (NO intenta construir)
 const possiblePaths = [
   path.join(__dirname, 'dist/proyecto-angular-completo1/browser'),
   path.join(__dirname, 'dist/proyecto-angular-completo1'),
@@ -14,42 +15,39 @@ const possiblePaths = [
 
 let distPath = null;
 
-// Buscar la primera ruta que contenga index.html
-for (const possiblePath of possiblePaths) {
-  const indexPath = path.join(possiblePath, 'index.html');
+for (const p of possiblePaths) {
+  const indexPath = path.join(p, 'index.html');
+  console.log(`Checking: ${indexPath}`);
   if (fs.existsSync(indexPath)) {
-    distPath = possiblePath;
+    distPath = p;
+    console.log(`✅ FOUND index.html at: ${indexPath}`);
     break;
   }
 }
 
-if (distPath) {
-  console.log(`Sirviendo archivos estáticos desde: ${distPath}`);
-  app.use(express.static(distPath));
-
-  // Para una SPA de Angular, todas las rutas deben redirigir a index.html
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(distPath, 'index.html'));
-  });
-} else {
-  // Si no se encuentra el build, mostrar un error detallado
-  console.error('No se encontró el build de Angular. Las rutas verificadas fueron:');
-  possiblePaths.forEach(p => console.error(`  - ${p}`));
-
+if (!distPath) {
+  console.error('❌ ERROR: No build found!');
+  console.error('Expected in one of:');
+  possiblePaths.forEach(p => console.error(`  - ${p}/index.html`));
+  
+  // Simple error page
   app.get('*', (req, res) => {
     res.status(500).send(`
-      <h1>Error: Aplicación no construida</h1>
-      <p>No se encontró la carpeta de construcción de Angular. Asegúrate de que:</p>
-      <ol>
-        <li>El comando de construcción (build) se ejecutó correctamente en Render.</li>
-        <li>El comando de construcción genera la carpeta 'dist' con el index.html.</li>
-      </ol>
-      <p>Consulta los logs de construcción en Render para más detalles.</p>
+      <h1>Build Error</h1>
+      <p>Application not built. Check Render logs.</p>
     `);
+  });
+} else {
+  console.log(`✅ Serving from: ${distPath}`);
+  app.use(express.static(distPath));
+  
+  // SPA: all routes to index.html
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
   });
 }
 
 const port = process.env.PORT || 10000;
 app.listen(port, () => {
-  console.log(`Servidor escuchando en el puerto ${port}`);
+  console.log(`✅ Server running on port ${port}`);
 });
