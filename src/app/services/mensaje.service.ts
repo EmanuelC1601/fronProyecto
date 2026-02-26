@@ -25,7 +25,7 @@ export interface PaginatedResponse {
   providedIn: 'root'
 })
 export class MensajeService {
-  private apiUrl = 'http://localhost:3000/api/mensajes'; // Ajusta según tu backend
+  private apiUrl = 'https://backend-bhit.onrender.com/api'; // Ajusta según tu backend
 
   constructor(private http: HttpClient) {}
 
