@@ -14,6 +14,7 @@ export class MensajesComponent implements OnInit {
   formData: Mensaje = { nombre_completo: '', email: '', edad: 18, mensaje: '' };
   editando = false;
   idEditando: number | null = null;
+  mostrarFormulario = false; // Controla la visibilidad del formulario
 
   // Filtros
   searchTerm: string = '';
@@ -27,7 +28,6 @@ export class MensajesComponent implements OnInit {
   ngOnInit(): void {
     this.cargarMensajes();
 
-    // Debounce para búsqueda en vivo
     this.searchSubject.pipe(
       debounceTime(500),
       distinctUntilChanged()
@@ -71,36 +71,51 @@ export class MensajesComponent implements OnInit {
     this.cargarMensajes();
   }
 
+  abrirFormularioNuevo(): void {
+    this.mostrarFormulario = true;
+    this.editando = false;
+    this.idEditando = null;
+    this.formData = { nombre_completo: '', email: '', edad: 18, mensaje: '' };
+  }
+
+  cancelar(): void {
+    this.mostrarFormulario = false;
+    this.editando = false;
+    this.idEditando = null;
+    this.formData = { nombre_completo: '', email: '', edad: 18, mensaje: '' };
+  }
+
   guardarMensaje(): void {
     if (this.editando && this.idEditando) {
       this.mensajeService.updateMensaje(this.idEditando, this.formData).subscribe({
         next: () => {
-          this.cancelarEdicion();
+          this.cancelar();
           this.cargarMensajes();
         },
-        error: (err) => alert('Error al actualizar: ' + err.error?.errors?.join(', '))
+        error: (err) => {
+          console.error(err);
+          alert('Error al actualizar: ' + (err.error?.errors?.join(', ') || 'Error desconocido'));
+        }
       });
     } else {
       this.mensajeService.createMensaje(this.formData).subscribe({
         next: () => {
-          this.formData = { nombre_completo: '', email: '', edad: 18, mensaje: '' };
+          this.cancelar();
           this.cargarMensajes();
         },
-        error: (err) => alert('Error al crear: ' + err.error?.errors?.join(', '))
+        error: (err) => {
+          console.error(err);
+          alert('Error al crear: ' + (err.error?.errors?.join(', ') || 'Error desconocido'));
+        }
       });
     }
   }
 
   editarMensaje(mensaje: Mensaje): void {
+    this.mostrarFormulario = true;
     this.editando = true;
     this.idEditando = mensaje.id!;
     this.formData = { ...mensaje };
-  }
-
-  cancelarEdicion(): void {
-    this.editando = false;
-    this.idEditando = null;
-    this.formData = { nombre_completo: '', email: '', edad: 18, mensaje: '' };
   }
 
   eliminarMensaje(id: number): void {

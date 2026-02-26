@@ -1,8 +1,31 @@
 <div class="container py-4">
   <h2 class="text-primary mb-4"><i class="bi bi-chat-dots"></i> Gestión de Mensajes</h2>
 
-  <!-- Formulario de creación/edición -->
-  <div class="card shadow-sm mb-4">
+  <!-- Fila de filtros y botón nuevo -->
+  <div class="row mb-3 align-items-end">
+    <div class="col-md-4">
+      <label class="form-label">Buscar por nombre o correo</label>
+      <input type="text" class="form-control" placeholder="Escribe para filtrar..." (input)="onSearchChange($event)">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Filtrar por edad</label>
+      <select class="form-select" (change)="onAgeFilterChange($event)">
+        <option value="">Todas las edades</option>
+        <option value="18-25">18 - 25 años</option>
+        <option value="26-35">26 - 35 años</option>
+        <option value="36-50">36 - 50 años</option>
+        <option value="51-120">51 años o más</option>
+      </select>
+    </div>
+    <div class="col-md-4 text-end">
+      <button class="btn btn-primary" (click)="abrirFormularioNuevo()" [disabled]="mostrarFormulario">
+        <i class="bi bi-plus-circle"></i> Nuevo Mensaje
+      </button>
+    </div>
+  </div>
+
+  <!-- Formulario de creación/edición (visible solo cuando mostrarFormulario es true) -->
+  <div class="card shadow-sm mb-4" *ngIf="mostrarFormulario">
     <div class="card-body">
       <h5 class="card-title">{{ editando ? 'Editar' : 'Nuevo' }} Mensaje</h5>
       <form (ngSubmit)="guardarMensaje()" #mensajeForm="ngForm">
@@ -40,29 +63,11 @@
           <button type="submit" class="btn btn-primary me-2" [disabled]="mensajeForm.invalid">
             <i class="bi bi-save"></i> Guardar
           </button>
-          <button type="button" class="btn btn-secondary" (click)="cancelarEdicion()" *ngIf="editando">
+          <button type="button" class="btn btn-secondary" (click)="cancelar()">
             <i class="bi bi-x-circle"></i> Cancelar
           </button>
         </div>
       </form>
-    </div>
-  </div>
-
-  <!-- Filtros y búsqueda -->
-  <div class="row mb-3">
-    <div class="col-md-6">
-      <label class="form-label">Buscar por nombre o correo</label>
-      <input type="text" class="form-control" placeholder="Escribe para filtrar..." (input)="onSearchChange($event)">
-    </div>
-    <div class="col-md-6">
-      <label class="form-label">Filtrar por edad</label>
-      <select class="form-select" (change)="onAgeFilterChange($event)">
-        <option value="">Todas las edades</option>
-        <option value="18-25">18 - 25 años</option>
-        <option value="26-35">26 - 35 años</option>
-        <option value="36-50">36 - 50 años</option>
-        <option value="51-120">51 años o más</option>
-      </select>
     </div>
   </div>
 
