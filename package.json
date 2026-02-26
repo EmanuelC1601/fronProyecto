@@ -3,8 +3,12 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
-    "build": "ng build",
+    "start": "node server.js",
+    "build": "ng build --configuration production --output-hashing=all --output-path=dist/proyecto-angular-completo1",
+    "prebuild": "echo '🚀 Starting Angular build...' && rm -rf dist/ 2>/dev/null || true",
+    "postbuild": "echo '✅ Build completed!' && if [ -d 'dist/proyecto-angular-completo1' ]; then echo 'Contents of dist:' && ls -la dist/proyecto-angular-completo1/; else echo '❌ No build output found'; fi",
+    "render-build": "npm install --legacy-peer-deps && npm run build",
+    "dev": "ng serve --port 4200",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },
@@ -21,6 +25,7 @@
     "@ng-bootstrap/ng-bootstrap": "^15.0.0",
     "bootstrap": "^5.3.2",
     "bootstrap-icons": "^1.11.1",
+    "express": "^4.18.2",
     "ngx-captcha": "^13.0.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
