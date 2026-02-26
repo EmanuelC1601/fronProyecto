@@ -14,7 +14,7 @@ export class MensajesComponent implements OnInit {
   formData: Mensaje = { nombre_completo: '', email: '', edad: 18, mensaje: '' };
   editando = false;
   idEditando: number | null = null;
-  mostrarFormulario = false; // Controla la visibilidad del formulario
+  mostrarFormulario = false;
 
   // Filtros
   searchTerm: string = '';
@@ -90,6 +90,7 @@ export class MensajesComponent implements OnInit {
       this.mensajeService.updateMensaje(this.idEditando, this.formData).subscribe({
         next: () => {
           this.cancelar();
+          this.paginacion.page = 1; // 👈 Volver a la primera página
           this.cargarMensajes();
         },
         error: (err) => {
@@ -101,6 +102,7 @@ export class MensajesComponent implements OnInit {
       this.mensajeService.createMensaje(this.formData).subscribe({
         next: () => {
           this.cancelar();
+          this.paginacion.page = 1; // 👈 Volver a la primera página
           this.cargarMensajes();
         },
         error: (err) => {
@@ -121,6 +123,9 @@ export class MensajesComponent implements OnInit {
   eliminarMensaje(id: number): void {
     if (confirm('¿Eliminar este mensaje?')) {
       this.mensajeService.deleteMensaje(id).subscribe(() => {
+        // Después de eliminar, puede ser conveniente mantener la página actual
+        // o volver a la primera si la página actual queda vacía.
+        // Aquí optamos por recargar la misma página (se ajusta automáticamente si es necesario)
         this.cargarMensajes();
       });
     }
