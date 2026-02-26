@@ -1,0 +1,126 @@
+<div class="container py-4">
+  <h2 class="text-primary mb-4"><i class="bi bi-chat-dots"></i> Gestión de Mensajes</h2>
+
+  <!-- Formulario de creación/edición -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <h5 class="card-title">{{ editando ? 'Editar' : 'Nuevo' }} Mensaje</h5>
+      <form (ngSubmit)="guardarMensaje()" #mensajeForm="ngForm">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Nombre completo</label>
+            <input type="text" class="form-control" [(ngModel)]="formData.nombre_completo" name="nombre" required pattern="^[a-zA-ZáéíóúñÁÉÍÓÚÑ\s]+$" #nombre="ngModel">
+            <div class="text-danger" *ngIf="nombre.invalid && nombre.touched">
+              Solo letras y espacios, no vacío.
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Correo electrónico</label>
+            <input type="email" class="form-control" [(ngModel)]="formData.email" name="email" required email #email="ngModel">
+            <div class="text-danger" *ngIf="email.invalid && email.touched">
+              Correo válido requerido.
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Edad (mínimo 18)</label>
+            <input type="number" class="form-control" [(ngModel)]="formData.edad" name="edad" required min="18" max="120" #edad="ngModel">
+            <div class="text-danger" *ngIf="edad.invalid && edad.touched">
+              Edad entre 18 y 120 años.
+            </div>
+          </div>
+          <div class="col-md-12">
+            <label class="form-label">Mensaje</label>
+            <textarea class="form-control" rows="3" [(ngModel)]="formData.mensaje" name="mensaje" required #mensaje="ngModel"></textarea>
+            <div class="text-danger" *ngIf="mensaje.invalid && mensaje.touched">
+              El mensaje no puede estar vacío.
+            </div>
+          </div>
+        </div>
+        <div class="mt-3">
+          <button type="submit" class="btn btn-primary me-2" [disabled]="mensajeForm.invalid">
+            <i class="bi bi-save"></i> Guardar
+          </button>
+          <button type="button" class="btn btn-secondary" (click)="cancelarEdicion()" *ngIf="editando">
+            <i class="bi bi-x-circle"></i> Cancelar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Filtros y búsqueda -->
+  <div class="row mb-3">
+    <div class="col-md-6">
+      <label class="form-label">Buscar por nombre o correo</label>
+      <input type="text" class="form-control" placeholder="Escribe para filtrar..." (input)="onSearchChange($event)">
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Filtrar por edad</label>
+      <select class="form-select" (change)="onAgeFilterChange($event)">
+        <option value="">Todas las edades</option>
+        <option value="18-25">18 - 25 años</option>
+        <option value="26-35">26 - 35 años</option>
+        <option value="36-50">36 - 50 años</option>
+        <option value="51-120">51 años o más</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Lista de mensajes -->
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h5 class="card-title">Mensajes registrados</h5>
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nombre</th>
+              <th>Email</th>
+              <th>Edad</th>
+              <th>Mensaje</th>
+              <th>Fecha</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let mensaje of mensajes">
+              <td>{{ mensaje.id }}</td>
+              <td>{{ mensaje.nombre_completo }}</td>
+              <td>{{ mensaje.email }}</td>
+              <td>{{ mensaje.edad }}</td>
+              <td>{{ mensaje.mensaje | slice:0:30 }}{{ mensaje.mensaje.length > 30 ? '...' : '' }}</td>
+              <td>{{ mensaje.created_at | date:'short' }}</td>
+              <td>
+                <button class="btn btn-sm btn-warning me-1" (click)="editarMensaje(mensaje)">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-sm btn-danger" (click)="eliminarMensaje(mensaje.id!)">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="mensajes.length === 0">
+              <td colspan="7" class="text-center text-muted">No hay mensajes</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Paginación -->
+      <nav *ngIf="paginacion.pages > 1">
+        <ul class="pagination justify-content-center">
+          <li class="page-item" [class.disabled]="paginacion.page === 1">
+            <button class="page-link" (click)="cambiarPagina(paginacion.page - 1)">Anterior</button>
+          </li>
+          <li class="page-item" *ngFor="let p of [].constructor(paginacion.pages); let i = index" [class.active]="paginacion.page === i+1">
+            <button class="page-link" (click)="cambiarPagina(i+1)">{{ i+1 }}</button>
+          </li>
+          <li class="page-item" [class.disabled]="paginacion.page === paginacion.pages">
+            <button class="page-link" (click)="cambiarPagina(paginacion.page + 1)">Siguiente</button>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </div>
+</div>

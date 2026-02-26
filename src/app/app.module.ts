@@ -4,6 +4,9 @@ import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { NgxCaptchaModule } from 'ngx-captcha';
 
+import { CommonModule } from '@angular/common';
+
+
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { HomeComponent } from './components/home/home.component';
@@ -12,6 +15,8 @@ import { InsertDataComponent } from './components/insert-data/insert-data.compon
 import { RegisterComponent } from './components/register/register.component';
 import { UploadAndCarouselComponent } from './components/upload-and-carousel/upload-and-carousel.component';
 import { BreadcrumbComponent } from './components/breadcrumb/breadcrumb.component';
+import { MensajesComponent } from './components/mensajes/mensajes.component';
+
 
 @NgModule({
   declarations: [
@@ -21,7 +26,8 @@ import { BreadcrumbComponent } from './components/breadcrumb/breadcrumb.componen
     InsertDataComponent,
     RegisterComponent,
     UploadAndCarouselComponent,
-    BreadcrumbComponent
+    BreadcrumbComponent,
+    MensajesComponent
   ],
   imports: [
     BrowserModule,
