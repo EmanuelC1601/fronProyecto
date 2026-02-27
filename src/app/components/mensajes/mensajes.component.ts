@@ -9,7 +9,7 @@ import { debounceTime, distinctUntilChanged, Subject } from 'rxjs';
 })
 export class MensajesComponent implements OnInit {
   mensajes: Mensaje[] = [];
-  paginacion = { page: 1, limit: 10, total: 0, pages: 0 };
+  paginacion = { page: 1, limit: 5, total: 0, pages: 0 }; // Cambiado a 5
 
   formData: Mensaje = { nombre_completo: '', email: '', edad: 18, mensaje: '' };
   editando = false;
@@ -90,7 +90,7 @@ export class MensajesComponent implements OnInit {
       this.mensajeService.updateMensaje(this.idEditando, this.formData).subscribe({
         next: () => {
           this.cancelar();
-          this.paginacion.page = 1; // 👈 Volver a la primera página
+          this.paginacion.page = 1;
           this.cargarMensajes();
         },
         error: (err) => {
@@ -102,7 +102,7 @@ export class MensajesComponent implements OnInit {
       this.mensajeService.createMensaje(this.formData).subscribe({
         next: () => {
           this.cancelar();
-          this.paginacion.page = 1; // 👈 Volver a la primera página
+          this.paginacion.page = 1;
           this.cargarMensajes();
         },
         error: (err) => {
@@ -123,17 +123,32 @@ export class MensajesComponent implements OnInit {
   eliminarMensaje(id: number): void {
     if (confirm('¿Eliminar este mensaje?')) {
       this.mensajeService.deleteMensaje(id).subscribe(() => {
-        // Después de eliminar, puede ser conveniente mantener la página actual
-        // o volver a la primera si la página actual queda vacía.
-        // Aquí optamos por recargar la misma página (se ajusta automáticamente si es necesario)
         this.cargarMensajes();
       });
     }
   }
 
   cambiarPagina(page: number): void {
-    this.paginacion.page = page;
-    this.cargarMensajes();
+    if (page >= 1 && page <= this.paginacion.pages) {
+      this.paginacion.page = page;
+      this.cargarMensajes();
+    }
+  }
+
+  // Getter para mostrar un rango de hasta 5 páginas alrededor de la actual
+  get paginasAMostrar(): number[] {
+    const total = this.paginacion.pages;
+    const actual = this.paginacion.page;
+    const maxPaginas = 5;
+    let inicio = Math.max(1, actual - Math.floor(maxPaginas / 2));
+    let fin = Math.min(total, inicio + maxPaginas - 1);
+    if (fin - inicio + 1 < maxPaginas) {
+      inicio = Math.max(1, fin - maxPaginas + 1);
+    }
+    const paginas: number[] = [];
+    for (let i = inicio; i <= fin; i++) {
+      paginas.push(i);
+    }
+    return paginas;
   }
 }
-//funcional probar
