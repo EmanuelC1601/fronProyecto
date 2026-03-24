@@ -3,7 +3,6 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
 import { Router } from '@angular/router';
 import { NgIf } from '@angular/common';
 import { AuthService } from '../../../core/services/auth.service';
-import { environment } from '../../../../environments/environment';
 
 declare var grecaptcha: any;
 
@@ -28,7 +27,6 @@ declare var grecaptcha: any;
 
         <form [formGroup]="form" (ngSubmit)="onSubmit()">
 
-          <!-- Usuario -->
           <div class="mb-3">
             <label class="form-label fw-semibold">Usuario</label>
             <div class="input-group">
@@ -45,7 +43,6 @@ declare var grecaptcha: any;
             </div>
           </div>
 
-          <!-- Contraseña -->
           <div class="mb-3">
             <label class="form-label fw-semibold">Contraseña</label>
             <div class="input-group">
@@ -66,19 +63,16 @@ declare var grecaptcha: any;
             </div>
           </div>
 
-          <!-- reCAPTCHA -->
           <div class="mb-3 d-flex justify-content-center">
             <div id="recaptcha-container"></div>
           </div>
 
           <div *ngIf="captchaError()" class="text-danger small text-center mb-2">
-            <i class="bi bi-exclamation-circle me-1"></i>Por favor completa el captcha.
+            Por favor completa el captcha.
           </div>
 
-          <!-- Botón -->
           <button type="submit" class="btn btn-primary w-100 mt-1" [disabled]="loading()">
             <span *ngIf="loading()" class="spinner-border spinner-border-sm me-2"></span>
-            <i *ngIf="!loading()" class="bi bi-box-arrow-in-right me-2"></i>
             {{ loading() ? 'Verificando...' : 'Ingresar' }}
           </button>
 
@@ -97,6 +91,10 @@ export class LoginComponent implements OnInit {
   captchaError = signal(false);
 
   private captchaRendered = false;
+  private widgetId: number | null = null;
+
+  // 🔥 KEY DIRECTA AQUÍ
+  private readonly siteKey = '6Lehh5YsAAAAALC4wBwdatLpSZNVgjq_BTtHyTg6';
 
   constructor(
     private fb: FormBuilder,
@@ -128,20 +126,12 @@ export class LoginComponent implements OnInit {
       return;
     }
 
-    if (document.getElementById('recaptcha-script')) return;
-
     const script = document.createElement('script');
-    script.id = 'recaptcha-script';
-    script.src = 'https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoad&render=explicit';
+    script.src = 'https://www.google.com/recaptcha/api.js?render=explicit';
     script.async = true;
     script.defer = true;
 
-    (window as any)['onRecaptchaLoad'] = () => this.renderRecaptcha();
-
-    script.onerror = () => {
-      console.error('Error cargando reCAPTCHA');
-      this.errorMsg.set('Error cargando captcha');
-    };
+    script.onload = () => this.renderRecaptcha();
 
     document.head.appendChild(script);
   }
@@ -150,15 +140,13 @@ export class LoginComponent implements OnInit {
     if (this.captchaRendered) return;
 
     if (typeof grecaptcha !== 'undefined') {
-      grecaptcha.render('recaptcha-container', {
-        sitekey: environment.recaptchaSiteKey,
-        callback: () => {
-          this.captchaError.set(false);
-        }
+      this.widgetId = grecaptcha.render('recaptcha-container', {
+        sitekey: this.siteKey,
+        callback: () => this.captchaError.set(false),
+        'expired-callback': () => this.captchaError.set(true)
       });
+
       this.captchaRendered = true;
-    } else {
-      console.error('grecaptcha no disponible');
     }
   }
 
@@ -171,24 +159,21 @@ export class LoginComponent implements OnInit {
     this.form.markAllAsTouched();
     if (this.form.invalid) return;
 
-    if (typeof grecaptcha === 'undefined') {
-      this.errorMsg.set('Captcha no disponible');
+    if (!this.widgetId) {
+      this.errorMsg.set('Captcha no inicializado');
       return;
     }
 
-    const captchaToken = grecaptcha.getResponse();
+    const captchaToken = grecaptcha.getResponse(this.widgetId);
 
     if (!captchaToken) {
       this.captchaError.set(true);
       return;
     }
 
-    this.captchaError.set(false);
-
     const { strNombreUsuario, strPwd } = this.form.value;
 
     this.loading.set(true);
-    this.errorMsg.set('');
 
     this.authService.login(strNombreUsuario, strPwd, captchaToken).subscribe({
       next: () => {
@@ -198,7 +183,9 @@ export class LoginComponent implements OnInit {
       error: err => {
         this.loading.set(false);
         this.errorMsg.set(err.error?.message || 'Error al iniciar sesión');
-        grecaptcha.reset();
+
+        // 🔥 reset correcto
+        grecaptcha.reset(this.widgetId);
       }
     });
   }
