@@ -1,5 +1,5 @@
 export const environment = {
   production: true,
-  apiUrl: 'http://localhost:3000/api',
-  recaptchaSiteKey: '6LfgNpUsAAAAAIxWpy9erP1p4bq9Z7hy9SEUA4lV'
+  apiUrl: 'https://backend-bhit.onrender.com/api',
+  recaptchaSiteKey: '6Lehh5YsAAAAALC4wBwdatLpSZNVgjq_BTtHyTg6'
 };
