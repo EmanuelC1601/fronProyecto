@@ -93,17 +93,29 @@ export class LoginComponent implements OnInit, AfterViewInit {
   }
 
   private loadRecaptcha() {
-    if ((window as any).grecaptcha) {
+    // 1. Si grecaptcha ya está completamente cargado en la ventana
+    if ((window as any).grecaptcha && (window as any).grecaptcha.render) {
       this.renderRecaptcha();
       return;
     }
 
+    // 2. Evitar inyectar múltiples scripts si el usuario entra y sale del componente
+    if (document.getElementById('recaptcha-script')) {
+      return;
+    }
+
     const script = document.createElement('script');
+    script.id = 'recaptcha-script';
     script.src = 'https://www.google.com/recaptcha/api.js?render=explicit';
     script.async = true;
     script.defer = true;
 
-    script.onload = () => this.renderRecaptcha();
+    // 3. Usar grecaptcha.ready() dentro del onload
+    script.onload = () => {
+      (window as any).grecaptcha.ready(() => {
+        this.renderRecaptcha();
+      });
+    };
 
     document.head.appendChild(script);
   }
