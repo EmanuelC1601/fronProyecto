@@ -76,6 +76,7 @@ export class LoginComponent implements OnInit, AfterViewInit {
   ) {}
 
   ngOnInit() {
+    console.log('Llave de reCAPTCHA cargada:', environment.recaptchaSiteKey); // 👀 MIRA ESTO EN RENDER
     if (this.authService.isLoggedIn()) {
       this.router.navigate(['/seguridad/perfil']);
       return;
@@ -122,13 +123,21 @@ export class LoginComponent implements OnInit, AfterViewInit {
 
   private renderRecaptcha() {
     const container = document.getElementById('recaptcha-container');
-    if (!container) return;
+    if (!container) {
+      console.warn('⚠️ No se encontró el contenedor de reCAPTCHA en el DOM');
+      return;
+    }
 
-    this.widgetId = grecaptcha.render(container, {
-      sitekey: environment.recaptchaSiteKey,
-      callback: () => this.captchaError.set(false),
-      'expired-callback': () => this.captchaError.set(true)
-    });
+    try {
+      this.widgetId = grecaptcha.render(container, {
+        sitekey: environment.recaptchaSiteKey,
+        callback: () => this.captchaError.set(false),
+        'expired-callback': () => this.captchaError.set(true)
+      });
+      console.log('✅ Captcha renderizado. Widget ID:', this.widgetId);
+    } catch (error) {
+      console.error('❌ Error fatal al renderizar el captcha:', error);
+    }
   }
 
   onSubmit() {
