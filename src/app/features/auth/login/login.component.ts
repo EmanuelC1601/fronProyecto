@@ -16,9 +16,7 @@ declare var grecaptcha: any;
       <div class="login-card">
 
         <div class="text-center mb-4">
-          <div class="mb-3">
-            <i class="bi bi-shield-lock-fill text-primary" style="font-size:3rem;"></i>
-          </div>
+          <i class="bi bi-shield-lock-fill text-primary" style="font-size:3rem;"></i>
           <h4 class="fw-bold mb-0">Sistema Corporativo</h4>
           <p class="text-muted small">Inicia sesión para continuar</p>
         </div>
@@ -98,6 +96,8 @@ export class LoginComponent implements OnInit {
   showPwd      = signal(false);
   captchaError = signal(false);
 
+  private captchaRendered = false;
+
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
@@ -118,16 +118,17 @@ export class LoginComponent implements OnInit {
     this.loadRecaptcha();
   }
 
-  // ✅ NUEVO MÉTODO (FIX)
   togglePwd() {
     this.showPwd.update(v => !v);
   }
 
   private loadRecaptcha() {
-    if (document.getElementById('recaptcha-script')) {
+    if ((window as any).grecaptcha) {
       this.renderRecaptcha();
       return;
     }
+
+    if (document.getElementById('recaptcha-script')) return;
 
     const script = document.createElement('script');
     script.id = 'recaptcha-script';
@@ -137,14 +138,27 @@ export class LoginComponent implements OnInit {
 
     (window as any)['onRecaptchaLoad'] = () => this.renderRecaptcha();
 
+    script.onerror = () => {
+      console.error('Error cargando reCAPTCHA');
+      this.errorMsg.set('Error cargando captcha');
+    };
+
     document.head.appendChild(script);
   }
 
   private renderRecaptcha() {
+    if (this.captchaRendered) return;
+
     if (typeof grecaptcha !== 'undefined') {
       grecaptcha.render('recaptcha-container', {
-        sitekey: environment.recaptchaSiteKey
+        sitekey: environment.recaptchaSiteKey,
+        callback: () => {
+          this.captchaError.set(false);
+        }
       });
+      this.captchaRendered = true;
+    } else {
+      console.error('grecaptcha no disponible');
     }
   }
 
@@ -157,14 +171,16 @@ export class LoginComponent implements OnInit {
     this.form.markAllAsTouched();
     if (this.form.invalid) return;
 
-    let captchaToken = '';
+    if (typeof grecaptcha === 'undefined') {
+      this.errorMsg.set('Captcha no disponible');
+      return;
+    }
 
-    if (typeof grecaptcha !== 'undefined') {
-      captchaToken = grecaptcha.getResponse();
-      if (!captchaToken) {
-        this.captchaError.set(true);
-        return;
-      }
+    const captchaToken = grecaptcha.getResponse();
+
+    if (!captchaToken) {
+      this.captchaError.set(true);
+      return;
     }
 
     this.captchaError.set(false);
@@ -182,7 +198,7 @@ export class LoginComponent implements OnInit {
       error: err => {
         this.loading.set(false);
         this.errorMsg.set(err.error?.message || 'Error al iniciar sesión');
-        if (typeof grecaptcha !== 'undefined') grecaptcha.reset();
+        grecaptcha.reset();
       }
     });
   }
