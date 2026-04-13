@@ -1,6 +1,6 @@
 import { Component, OnInit, signal, computed } from '@angular/core';
 import { NgFor, NgIf } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormsModule } from '@angular/forms';  // ✅ Solo FormsModule, no ReactiveFormsModule
 import { BreadcrumbComponent } from '../../../shared/components/breadcrumb/breadcrumb.component';
 import { PermisosPerfilService } from '../../../core/services/permisos-perfil.service';
 import { PerfilService } from '../../../core/services/perfil.service';
