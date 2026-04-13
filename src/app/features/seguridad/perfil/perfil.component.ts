@@ -31,19 +31,20 @@ import { Perfil } from '../../../shared/models';
                 <th>#</th>
                 <th>Nombre del Perfil</th>
                 <th>Administrador</th>
+                <th>Descripción</th>
                 <th *ngIf="permisos().bitEditar || permisos().bitEliminar || permisos().bitDetalle"
                     class="text-center">Acciones</th>
               </tr>
             </thead>
             <tbody>
               <tr *ngIf="loading()">
-                <td colspan="4" class="text-center py-4">
+                <td colspan="5" class="text-center py-4">
                   <div class="spinner-border spinner-border-sm text-primary"></div>
                   Cargando...
                 </td>
               </tr>
               <tr *ngIf="!loading() && perfiles().length === 0">
-                <td colspan="4" class="text-center py-4 text-muted">Sin registros</td>
+                <td colspan="5" class="text-center py-4 text-muted">Sin registros</td>
               </tr>
               <tr *ngFor="let p of perfiles()">
                 <td class="text-muted small">{{ p.id }}</td>
@@ -53,6 +54,7 @@ import { Perfil } from '../../../shared/models';
                     {{ p.bitAdministrador ? 'Sí' : 'No' }}
                   </span>
                 </td>
+                <td class="text-muted small">{{ p.strDescripcion || '—' }}</td>
                 <td class="text-center" *ngIf="permisos().bitEditar || permisos().bitEliminar || permisos().bitDetalle">
                   <button *ngIf="permisos().bitDetalle"
                           class="btn btn-sm btn-outline-info me-1"
@@ -86,7 +88,7 @@ import { Perfil } from '../../../shared/models';
 
     <!-- Modal detalle -->
     <div *ngIf="detailItem()" class="modal-backdrop-custom" (click)="detailItem.set(null)">
-      <div class="card shadow-lg" style="width:360px;" (click)="$event.stopPropagation()">
+      <div class="card shadow-lg" style="width:400px;" (click)="$event.stopPropagation()">
         <div class="card-header d-flex justify-content-between align-items-center">
           <span class="fw-bold"><i class="bi bi-info-circle me-2 text-info"></i>Detalle Perfil</span>
           <button class="btn btn-sm btn-outline-secondary" (click)="detailItem.set(null)">
@@ -105,14 +107,16 @@ import { Perfil } from '../../../shared/models';
                 {{ detailItem()!.bitAdministrador ? 'Sí' : 'No' }}
               </span>
             </dd>
+            <dt class="col-5 text-muted">Descripción</dt>
+            <dd class="col-7">{{ detailItem()!.strDescripcion || '—' }}</dd>
           </dl>
         </div>
       </div>
     </div>
 
-    <!-- Modal formulario -->
+    <!-- Modal formulario ACTUALIZADO con descripción -->
     <div *ngIf="showForm()" class="modal-backdrop-custom">
-      <div class="card shadow-lg" style="width:420px;">
+      <div class="card shadow-lg" style="width:480px;">
         <div class="card-header d-flex justify-content-between align-items-center">
           <span class="fw-bold">
             <i class="bi bi-person-badge me-2 text-primary"></i>
@@ -125,21 +129,49 @@ import { Perfil } from '../../../shared/models';
         <div class="card-body">
           <div *ngIf="formError()" class="alert alert-danger py-2 small">{{ formError() }}</div>
           <form [formGroup]="form" (ngSubmit)="saveForm()">
+            
+            <!-- Nombre del Perfil -->
             <div class="mb-3">
               <label class="form-label fw-semibold">Nombre del Perfil *</label>
               <input type="text" class="form-control"
                      formControlName="strNombrePerfil"
-                     placeholder="Ej: Administrador"
+                     placeholder="Nombre del perfil"
                      [class.is-invalid]="isInvalid('strNombrePerfil')" />
               <div class="invalid-feedback">Campo requerido.</div>
             </div>
+
+            <!-- Perfil Administrador con mensaje de ayuda -->
             <div class="mb-3">
               <div class="form-check form-switch">
                 <input class="form-check-input" type="checkbox" id="bitAdmin"
                        formControlName="bitAdministrador" />
-                <label class="form-check-label" for="bitAdmin">¿Es Administrador?</label>
+                <label class="form-check-label fw-semibold" for="bitAdmin">
+                  Perfil Administrador
+                </label>
+              </div>
+              <div class="form-text text-muted small mt-1 ms-1">
+                <i class="bi bi-info-circle"></i>
+                Los perfiles administradores tienen acceso completo al sistema.
               </div>
             </div>
+
+            <!-- Descripción (opcional) -->
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Descripción</label>
+              <textarea class="form-control"
+                        rows="3"
+                        formControlName="strDescripcion"
+                        placeholder="Descripción opcional del perfil"
+                        [class.is-invalid]="isInvalid('strDescripcion')"
+                        (input)="onDescripcionInput($event)"></textarea>
+              <div class="form-text text-muted small">
+                Máximo 255 caracteres. {{ descripcionLength() }}/255
+              </div>
+              <div *ngIf="isInvalid('strDescripcion')" class="invalid-feedback">
+                La descripción no puede exceder 255 caracteres.
+              </div>
+            </div>
+
             <div class="d-flex gap-2 justify-content-end">
               <button type="button" class="btn btn-secondary btn-sm" (click)="closeForm()">
                 Cancelar
@@ -161,6 +193,9 @@ import { Perfil } from '../../../shared/models';
       display: flex; align-items: center; justify-content: center;
       z-index: 1050;
     }
+    textarea {
+      resize: vertical;
+    }
   `]
 })
 export class PerfilComponent implements OnInit {
@@ -174,6 +209,7 @@ export class PerfilComponent implements OnInit {
   saving       = signal(false);
   formError    = signal('');
   detailItem   = signal<Perfil | null>(null);
+  descripcionLength = signal(0);
   permisos     = signal({ bitAgregar: false, bitEditar: false, bitEliminar: false,
                           bitConsulta: false, bitDetalle: false });
 
@@ -195,8 +231,20 @@ export class PerfilComponent implements OnInit {
   buildForm() {
     this.form = this.fb.group({
       strNombrePerfil:  ['', Validators.required],
-      bitAdministrador: [false]
+      bitAdministrador: [false],
+      strDescripcion:   ['', [Validators.maxLength(255)]]  // Validación de 255 caracteres
     });
+  }
+
+  onDescripcionInput(event: Event) {
+    const textarea = event.target as HTMLTextAreaElement;
+    this.descripcionLength.set(textarea.value.length);
+    
+    // Si excede 255, truncar
+    if (textarea.value.length > 255) {
+      this.form.patchValue({ strDescripcion: textarea.value.slice(0, 255) });
+      this.descripcionLength.set(255);
+    }
   }
 
   loadPage(page: number) {
@@ -216,7 +264,12 @@ export class PerfilComponent implements OnInit {
   openForm() {
     this.editingId.set(null);
     this.formError.set('');
-    this.form.reset({ strNombrePerfil: '', bitAdministrador: false });
+    this.descripcionLength.set(0);
+    this.form.reset({ 
+      strNombrePerfil: '', 
+      bitAdministrador: false,
+      strDescripcion: ''
+    });
     this.showForm.set(true);
   }
 
@@ -224,6 +277,7 @@ export class PerfilComponent implements OnInit {
     this.editingId.set(p.id!);
     this.formError.set('');
     this.form.patchValue(p);
+    this.descripcionLength.set(p.strDescripcion?.length || 0);
     this.showForm.set(true);
   }
 

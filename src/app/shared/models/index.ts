@@ -2,6 +2,7 @@ export interface Perfil {
   id?: number;
   strNombrePerfil: string;
   bitAdministrador: boolean;
+  strDescripcion?: string;  // ← NUEVO CAMPO
 }
 
 export interface Modulo {
