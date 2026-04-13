@@ -42,7 +42,7 @@ import { PermisosPerfil, Perfil, Modulo } from '../../../shared/models';
         </div>
 
         <!-- Tabla de Permisos (solo si hay perfil seleccionado) -->
-        <div *ngIf="selectedPerfilId" class="table-responsive">
+        <div *ngIf="selectedPerfilId">
           <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
               <i class="bi bi-person-badge me-1 text-primary"></i>
@@ -57,66 +57,81 @@ import { PermisosPerfil, Perfil, Modulo } from '../../../shared/models';
             </button>
           </div>
 
-          <table class="table table-bordered table-hover align-middle text-center">
-            <thead class="table-light">
-              <tr>
-                <th class="text-start" style="width: 200px">Módulos</th>
-                <th style="min-width: 90px">Agregar</th>
-                <th style="min-width: 90px">Editar</th>
-                <th style="min-width: 90px">Eliminar</th>
-                <th style="min-width: 90px">Consultar</th>
-                <th style="min-width: 90px">Detalle</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let modulo of modulosList()">
-                <td class="text-start fw-semibold">
-                  <i class="bi bi-grid me-2 text-secondary"></i>
-                  {{ modulo.strNombreModulo }}
-                </td>
-                <td>
-                  <div class="form-check d-flex justify-content-center">
-                    <input class="form-check-input" type="checkbox"
-                           [ngModel]="getPermiso(modulo.id!, 'bitAgregar')"
-                           (ngModelChange)="setPermiso(modulo.id!, 'bitAgregar', $event)" />
-                  </div>
-                </td>
-                <td>
-                  <div class="form-check d-flex justify-content-center">
-                    <input class="form-check-input" type="checkbox"
-                           [ngModel]="getPermiso(modulo.id!, 'bitEditar')"
-                           (ngModelChange)="setPermiso(modulo.id!, 'bitEditar', $event)" />
-                  </div>
-                </td>
-                <td>
-                  <div class="form-check d-flex justify-content-center">
-                    <input class="form-check-input" type="checkbox"
-                           [ngModel]="getPermiso(modulo.id!, 'bitEliminar')"
-                           (ngModelChange)="setPermiso(modulo.id!, 'bitEliminar', $event)" />
-                  </div>
-                </td>
-                <td>
-                  <div class="form-check d-flex justify-content-center">
-                    <input class="form-check-input" type="checkbox"
-                           [ngModel]="getPermiso(modulo.id!, 'bitConsulta')"
-                           (ngModelChange)="setPermiso(modulo.id!, 'bitConsulta', $event)" />
-                  </div>
-                </td>
-                <td>
-                  <div class="form-check d-flex justify-content-center">
-                    <input class="form-check-input" type="checkbox"
-                           [ngModel]="getPermiso(modulo.id!, 'bitDetalle')"
-                           (ngModelChange)="setPermiso(modulo.id!, 'bitDetalle', $event)" />
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <!-- Mostrar loading -->
+          <div *ngIf="loadingPermisos()" class="text-center py-5">
+            <div class="spinner-border text-primary"></div>
+            <p class="mt-2 text-muted">Cargando permisos...</p>
+          </div>
 
-          <!-- Mensaje cuando no hay cambios -->
-          <div *ngIf="!hayCambios() && !loadingPermisos()" class="alert alert-light text-center mt-3 py-2">
-            <i class="bi bi-info-circle me-1"></i>
-            Sin cambios. Modifica algún permiso para habilitar el guardado.
+          <!-- Tabla de permisos -->
+          <div *ngIf="!loadingPermisos()" class="table-responsive">
+            <table class="table table-bordered table-hover align-middle text-center">
+              <thead class="table-light">
+                <tr>
+                  <th class="text-start" style="width: 200px">Módulos</th>
+                  <th style="min-width: 90px">Agregar</th>
+                  <th style="min-width: 90px">Editar</th>
+                  <th style="min-width: 90px">Eliminar</th>
+                  <th style="min-width: 90px">Consultar</th>
+                  <th style="min-width: 90px">Detalle</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let modulo of modulosArray()">
+                  <td class="text-start fw-semibold">
+                    <i class="bi bi-grid me-2 text-secondary"></i>
+                    {{ modulo.strNombreModulo }}
+                   </td>
+                  <td>
+                    <div class="form-check d-flex justify-content-center">
+                      <input class="form-check-input" type="checkbox"
+                             [ngModel]="getPermiso(modulo.id!, 'bitAgregar')"
+                             (ngModelChange)="setPermiso(modulo.id!, 'bitAgregar', $event)" />
+                    </div>
+                   </td>
+                  <td>
+                    <div class="form-check d-flex justify-content-center">
+                      <input class="form-check-input" type="checkbox"
+                             [ngModel]="getPermiso(modulo.id!, 'bitEditar')"
+                             (ngModelChange)="setPermiso(modulo.id!, 'bitEditar', $event)" />
+                    </div>
+                   </td>
+                  <td>
+                    <div class="form-check d-flex justify-content-center">
+                      <input class="form-check-input" type="checkbox"
+                             [ngModel]="getPermiso(modulo.id!, 'bitEliminar')"
+                             (ngModelChange)="setPermiso(modulo.id!, 'bitEliminar', $event)" />
+                    </div>
+                   </td>
+                  <td>
+                    <div class="form-check d-flex justify-content-center">
+                      <input class="form-check-input" type="checkbox"
+                             [ngModel]="getPermiso(modulo.id!, 'bitConsulta')"
+                             (ngModelChange)="setPermiso(modulo.id!, 'bitConsulta', $event)" />
+                    </div>
+                   </td>
+                  <td>
+                    <div class="form-check d-flex justify-content-center">
+                      <input class="form-check-input" type="checkbox"
+                             [ngModel]="getPermiso(modulo.id!, 'bitDetalle')"
+                             (ngModelChange)="setPermiso(modulo.id!, 'bitDetalle', $event)" />
+                    </div>
+                   </td>
+                 </tr>
+                <tr *ngIf="modulosArray().length === 0">
+                  <td colspan="6" class="text-center py-4 text-muted">
+                    No hay módulos disponibles. Crea algunos módulos primero.
+                   </td>
+                 </tr>
+              </tbody>
+            </table>
+
+            <!-- Mensaje cuando no hay cambios -->
+            <div *ngIf="!hayCambios() && !loadingPermisos() && modulosArray().length > 0" 
+                 class="alert alert-light text-center mt-3 py-2">
+              <i class="bi bi-info-circle me-1"></i>
+              Sin cambios. Modifica algún permiso para habilitar el guardado.
+            </div>
           </div>
         </div>
 
@@ -140,32 +155,28 @@ import { PermisosPerfil, Perfil, Modulo } from '../../../shared/models';
     .table-bordered {
       border: 1px solid #dee2e6;
     }
-    .btn-success:disabled {
-      cursor: not-allowed;
-    }
   `]
 })
 export class PermisosPerfilComponent implements OnInit {
-  // Listas
+  // Listas como signals
   perfilesList = signal<Perfil[]>([]);
   modulosList = signal<Modulo[]>([]);
   
   // Estado
   selectedPerfilId: number | null = null;
-  permisosOriginales = new Map<number, PermisosPerfil>();  // Para detectar cambios
-  permisosEditados = new Map<number, PermisosPerfil>();    // Para edición temporal
+  permisosOriginales = new Map<number, PermisosPerfil>();
+  permisosEditados = new Map<number, PermisosPerfil>();
   
   // Signals para UI
   saving = signal(false);
   loadingPermisos = signal(false);
   loadingCatalogos = signal(false);
   
-  constructor(
-    private perfilService: PerfilService,
-    private moduloService: ModuloService,
-    private ppService: PermisosPerfilService,
-    private authService: AuthService
-  ) {}
+  // Computed: devuelve un array siempre (para evitar errores)
+  modulosArray = computed(() => {
+    const lista = this.modulosList();
+    return Array.isArray(lista) ? lista : [];
+  });
   
   // Computed: nombre del perfil seleccionado
   selectedPerfilNombre = computed(() => {
@@ -192,6 +203,13 @@ export class PermisosPerfilComponent implements OnInit {
     return false;
   });
   
+  constructor(
+    private perfilService: PerfilService,
+    private moduloService: ModuloService,
+    private ppService: PermisosPerfilService,
+    private authService: AuthService
+  ) {}
+  
   ngOnInit() {
     this.cargarCatalogos();
   }
@@ -202,22 +220,25 @@ export class PermisosPerfilComponent implements OnInit {
     // Cargar perfiles
     this.perfilService.getAll(1).subscribe({
       next: res => {
-        this.perfilesList.set(res.data);
+        console.log('✅ Perfiles cargados:', res.data);
+        this.perfilesList.set(res.data || []);
         this.loadingCatalogos.set(false);
       },
       error: err => {
-        console.error('Error cargando perfiles:', err);
+        console.error('❌ Error cargando perfiles:', err);
         this.loadingCatalogos.set(false);
       }
     });
     
-    // Cargar todos los módulos (sin paginación)
+    // Cargar módulos
     this.moduloService.getAllSimple().subscribe({
       next: res => {
-        this.modulosList.set(res);
+        console.log('✅ Módulos cargados:', res);
+        this.modulosList.set(Array.isArray(res) ? res : []);
       },
       error: err => {
-        console.error('Error cargando módulos:', err);
+        console.error('❌ Error cargando módulos:', err);
+        this.modulosList.set([]);
       }
     });
   }
@@ -231,49 +252,54 @@ export class PermisosPerfilComponent implements OnInit {
     
     this.loadingPermisos.set(true);
     
-    // Cargar permisos del perfil seleccionado
+    console.log('📡 Cargando permisos para perfil:', this.selectedPerfilId);
+    
     this.ppService.getByPerfil(this.selectedPerfilId).subscribe({
       next: (permisos) => {
+        console.log('✅ Permisos recibidos:', permisos);
+        
         // Limpiar maps
         this.permisosOriginales.clear();
         this.permisosEditados.clear();
         
         // Cargar permisos existentes
-        permisos.forEach(p => {
-          if (p.idModulo) {
-            this.permisosOriginales.set(p.idModulo, p);
-            // Crear copia para edición
-            this.permisosEditados.set(p.idModulo, { ...p });
-          }
-        });
+        if (Array.isArray(permisos)) {
+          permisos.forEach(p => {
+            if (p.idModulo) {
+              this.permisosOriginales.set(p.idModulo, p);
+              this.permisosEditados.set(p.idModulo, { ...p });
+            }
+          });
+        }
         
-        // Asegurar que todos los módulos tengan al menos un registro de permisos
-        this.modulosList().forEach(modulo => {
-          if (!this.permisosOriginales.has(modulo.id!)) {
+        // Asegurar que todos los módulos tengan permisos
+        const modulos = this.modulosArray();
+        modulos.forEach(modulo => {
+          const moduloId = modulo.id;
+          if (moduloId && !this.permisosOriginales.has(moduloId)) {
             const nuevoPermiso: PermisosPerfil = {
               idPerfil: this.selectedPerfilId!,
-              idModulo: modulo.id!,
+              idModulo: moduloId,
               bitAgregar: false,
               bitEditar: false,
               bitEliminar: false,
               bitConsulta: false,
               bitDetalle: false
             };
-            this.permisosOriginales.set(modulo.id!, nuevoPermiso);
-            this.permisosEditados.set(modulo.id!, { ...nuevoPermiso });
+            this.permisosOriginales.set(moduloId, nuevoPermiso);
+            this.permisosEditados.set(moduloId, { ...nuevoPermiso });
           }
         });
         
         this.loadingPermisos.set(false);
       },
       error: err => {
-        console.error('Error cargando permisos:', err);
+        console.error('❌ Error cargando permisos:', err);
         this.loadingPermisos.set(false);
       }
     });
   }
   
-  // Obtener valor de un permiso específico
   getPermiso(moduloId: number, campo: string): boolean {
     const permiso = this.permisosEditados.get(moduloId);
     if (!permiso) return false;
@@ -288,7 +314,6 @@ export class PermisosPerfilComponent implements OnInit {
     }
   }
   
-  // Establecer valor de un permiso
   setPermiso(moduloId: number, campo: string, valor: boolean) {
     let permiso = this.permisosEditados.get(moduloId);
     
@@ -306,21 +331,11 @@ export class PermisosPerfilComponent implements OnInit {
     }
     
     switch(campo) {
-      case 'bitAgregar': 
-        permiso.bitAgregar = valor; 
-        break;
-      case 'bitEditar': 
-        permiso.bitEditar = valor; 
-        break;
-      case 'bitEliminar': 
-        permiso.bitEliminar = valor; 
-        break;
-      case 'bitConsulta': 
-        permiso.bitConsulta = valor; 
-        break;
-      case 'bitDetalle': 
-        permiso.bitDetalle = valor; 
-        break;
+      case 'bitAgregar': permiso.bitAgregar = valor; break;
+      case 'bitEditar': permiso.bitEditar = valor; break;
+      case 'bitEliminar': permiso.bitEliminar = valor; break;
+      case 'bitConsulta': permiso.bitConsulta = valor; break;
+      case 'bitDetalle': permiso.bitDetalle = valor; break;
     }
   }
   
@@ -329,25 +344,21 @@ export class PermisosPerfilComponent implements OnInit {
     
     this.saving.set(true);
     
-    // Obtener solo los permisos que cambiaron o son nuevos
     const permisosAGuardar: PermisosPerfil[] = [];
     
     for (const [moduloId, editado] of this.permisosEditados) {
       const original = this.permisosOriginales.get(moduloId);
       
-      // Si no existe original o hay cambios
       if (!original || 
           original.bitAgregar !== editado.bitAgregar ||
           original.bitEditar !== editado.bitEditar ||
           original.bitEliminar !== editado.bitEliminar ||
           original.bitConsulta !== editado.bitConsulta ||
           original.bitDetalle !== editado.bitDetalle) {
-        
         permisosAGuardar.push(editado);
       }
     }
     
-    // Guardar cada permiso (crear o actualizar)
     const promises = permisosAGuardar.map(permiso => {
       const existingId = this.permisosOriginales.get(permiso.idModulo!)?.id;
       
@@ -360,7 +371,6 @@ export class PermisosPerfilComponent implements OnInit {
     
     Promise.all(promises)
       .then(() => {
-        // Actualizar originales con los editados
         for (const [moduloId, editado] of this.permisosEditados) {
           this.permisosOriginales.set(moduloId, { ...editado });
         }
