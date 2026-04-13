@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment.prod';
 import { Modulo, PaginatedResponse } from '../../shared/models';
 
@@ -13,8 +14,9 @@ export class ModuloService {
     return this.http.get<PaginatedResponse<Modulo>>(`${this.apiUrl}?page=${page}`);
   }
 
+  // ✅ CORREGIDO: Usa la ruta /all que creaste en el backend
   getAllSimple() {
-    return this.http.get<Modulo[]>(`${this.apiUrl}`);
+    return this.http.get<Modulo[]>(`${this.apiUrl}/all`);
   }
 
   getById(id: number) {
