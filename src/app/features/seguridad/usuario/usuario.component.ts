@@ -1,6 +1,7 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { NgFor, NgIf } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 import { BreadcrumbComponent } from '../../../shared/components/breadcrumb/breadcrumb.component';
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
 import { UsuarioService } from '../../../core/services/usuario.service';
@@ -11,7 +12,7 @@ import { Usuario, Perfil } from '../../../shared/models';
 @Component({
   selector: 'app-usuario',
   standalone: true,
-  imports: [NgFor, NgIf, ReactiveFormsModule, BreadcrumbComponent, PaginationComponent],
+  imports: [NgFor, NgIf, ReactiveFormsModule, FormsModule, BreadcrumbComponent, PaginationComponent],
   template: `
     <app-breadcrumb [items]="[{label:'Seguridad'},{label:'Usuario'}]" />
 
@@ -20,6 +21,45 @@ import { Usuario, Perfil } from '../../../shared/models';
       <button *ngIf="permisos().bitAgregar" class="btn btn-primary btn-sm" (click)="openForm()">
         <i class="bi bi-plus-circle me-1"></i> Nuevo Usuario
       </button>
+    </div>
+
+    <!-- 🔍 BARRA DE BÚSQUEDA -->
+    <div class="card mb-3">
+      <div class="card-body py-2">
+        <div class="row g-2 align-items-center">
+          <div class="col-md-5">
+            <div class="input-group">
+              <span class="input-group-text bg-white">
+                <i class="bi bi-search"></i>
+              </span>
+              <input type="text" 
+                     class="form-control" 
+                     placeholder="Buscar por usuario, correo o perfil..."
+                     [(ngModel)]="terminoBusqueda"
+                     (ngModelChange)="onBuscar()">
+              <button *ngIf="terminoBusqueda" 
+                      class="btn btn-outline-secondary" 
+                      type="button" 
+                      (click)="limpiarBusqueda()">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <select class="form-select" [(ngModel)]="filtroEstado" (ngModelChange)="onBuscar()">
+              <option value="">Todos los estados</option>
+              <option value="activo">Activos</option>
+              <option value="inactivo">Inactivos</option>
+            </select>
+          </div>
+          <div class="col-md-4 text-md-end">
+            <span class="text-muted small">
+              <i class="bi bi-info-circle"></i>
+              {{ usuariosFiltrados().length }} de {{ total() }} usuarios
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -43,10 +83,13 @@ import { Usuario, Perfil } from '../../../shared/models';
                   <div class="spinner-border spinner-border-sm text-primary"></div> Cargando...
                 </td>
               </tr>
-              <tr *ngIf="!loading() && usuarios().length === 0">
-                <td colspan="6" class="text-center py-4 text-muted">Sin registros</td>
+              <tr *ngIf="!loading() && usuariosFiltrados().length === 0">
+                <td colspan="6" class="text-center py-4 text-muted">
+                  <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                  No se encontraron usuarios
+                </td>
               </tr>
-              <tr *ngFor="let u of usuarios()">
+              <tr *ngFor="let u of usuariosFiltrados()">
                 <td>
                   <img *ngIf="u.strImagen"
                        [src]="usuarioService.getImageUrl(u.strImagen)"
@@ -95,7 +138,8 @@ import { Usuario, Perfil } from '../../../shared/models';
           [currentPage]="currentPage()"
           [pages]="totalPages()"
           [total]="total()"
-          (pageChange)="loadPage($event)" />
+          (pageChange)="loadPage($event)">
+        </app-pagination>
       </div>
     </div>
 
@@ -142,18 +186,14 @@ import { Usuario, Perfil } from '../../../shared/models';
           <p class="small text-muted mb-3">
             Usuario: <strong>{{ uploadTarget()!.strNombreUsuario }}</strong>
           </p>
-
           <div *ngIf="previewUrl()" class="mb-3">
             <img [src]="previewUrl()!" class="rounded-circle"
                  style="width:100px;height:100px;object-fit:cover;" alt="preview" />
           </div>
-
           <input type="file" class="form-control form-control-sm mb-3"
                  accept="image/jpeg,image/png,image/gif,image/webp"
                  (change)="onFileSelected($event)" />
-
           <div *ngIf="uploadError()" class="alert alert-danger py-2 small">{{ uploadError() }}</div>
-
           <button class="btn btn-primary btn-sm w-100"
                   [disabled]="!selectedFile() || uploadingImg()"
                   (click)="uploadImage()">
@@ -182,7 +222,7 @@ import { Usuario, Perfil } from '../../../shared/models';
                 <label class="form-label fw-semibold">Usuario *</label>
                 <input type="text" class="form-control" formControlName="strNombreUsuario"
                        [class.is-invalid]="isInvalid('strNombreUsuario')" />
-                <div class="invalid-feedback">Requerido.</div>
+                <div class="invalid-feedback">Requerido (mínimo 3 caracteres)</div>
               </div>
               <div class="col-6">
                 <label class="form-label fw-semibold">Perfil *</label>
@@ -191,7 +231,7 @@ import { Usuario, Perfil } from '../../../shared/models';
                   <option value="">Seleccionar...</option>
                   <option *ngFor="let p of perfilesList()" [value]="p.id">{{ p.strNombrePerfil }}</option>
                 </select>
-                <div class="invalid-feedback">Requerido.</div>
+                <div class="invalid-feedback">Requerido</div>
               </div>
               <div class="col-12">
                 <label class="form-label fw-semibold">
@@ -199,13 +239,13 @@ import { Usuario, Perfil } from '../../../shared/models';
                 </label>
                 <input type="password" class="form-control" formControlName="strPwd"
                        [class.is-invalid]="isInvalid('strPwd')" />
-                <div class="invalid-feedback">Mínimo 6 caracteres.</div>
+                <div class="invalid-feedback">Mínimo 6 caracteres</div>
               </div>
               <div class="col-8">
                 <label class="form-label fw-semibold">Correo *</label>
                 <input type="email" class="form-control" formControlName="strCorreo"
                        [class.is-invalid]="isInvalid('strCorreo')" />
-                <div class="invalid-feedback">Correo inválido.</div>
+                <div class="invalid-feedback">Correo inválido</div>
               </div>
               <div class="col-4">
                 <label class="form-label fw-semibold">Estado</label>
@@ -218,7 +258,8 @@ import { Usuario, Perfil } from '../../../shared/models';
               <div class="col-12">
                 <label class="form-label fw-semibold">Número Celular</label>
                 <input type="text" class="form-control" formControlName="strNumeroCelular"
-                       placeholder="Opcional" />
+                       placeholder="Opcional - 10 dígitos" />
+                <div class="invalid-feedback">Debe tener 10 dígitos</div>
               </div>
             </div>
             <div class="d-flex gap-2 justify-content-end mt-3">
@@ -233,35 +274,70 @@ import { Usuario, Perfil } from '../../../shared/models';
       </div>
     </div>
   `,
-  styles: [`.modal-backdrop-custom{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:1050;}`]
+  styles: [`
+    .modal-backdrop-custom {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1050;
+    }
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    .avatar-placeholder {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #0d6efd;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+  `]
 })
 export class UsuarioComponent implements OnInit {
-  usuarios     = signal<Usuario[]>([]);
+  usuarios = signal<Usuario[]>([]);
   perfilesList = signal<Perfil[]>([]);
-  loading      = signal(true);
-  currentPage  = signal(1);
-  totalPages   = signal(1);
-  total        = signal(0);
-  showForm     = signal(false);
-  editingId    = signal<number | null>(null);
-  saving       = signal(false);
-  formError    = signal('');
-  detailItem   = signal<Usuario | null>(null);
+  loading = signal(true);
+  currentPage = signal(1);
+  totalPages = signal(1);
+  total = signal(0);
+  showForm = signal(false);
+  editingId = signal<number | null>(null);
+  saving = signal(false);
+  formError = signal('');
+  detailItem = signal<Usuario | null>(null);
   uploadTarget = signal<Usuario | null>(null);
   selectedFile = signal<File | null>(null);
-  previewUrl   = signal<string | null>(null);
+  previewUrl = signal<string | null>(null);
   uploadingImg = signal(false);
-  uploadError  = signal('');
-  permisos     = signal({ bitAgregar: false, bitEditar: false, bitEliminar: false,
-                          bitConsulta: false, bitDetalle: false });
+  uploadError = signal('');
+  permisos = signal({
+    bitAgregar: false,
+    bitEditar: false,
+    bitEliminar: false,
+    bitConsulta: false,
+    bitDetalle: false
+  });
+  
+  terminoBusqueda: string = '';
+  filtroEstado: string = '';
+  
   form!: FormGroup;
+  usuariosFiltrados = signal<Usuario[]>([]);
 
   constructor(
-  public usuarioService: UsuarioService,
-  private perfilService: PerfilService,
-  private authService: AuthService,
-  private fb: FormBuilder
-) {} 
+    public usuarioService: UsuarioService,
+    private perfilService: PerfilService,
+    private authService: AuthService,
+    private fb: FormBuilder
+  ) {}
 
   ngOnInit() {
     const p = this.authService.getPermisoForModulo('usuario');
@@ -273,12 +349,12 @@ export class UsuarioComponent implements OnInit {
 
   buildForm(editMode: boolean) {
     this.form = this.fb.group({
-      strNombreUsuario: ['', Validators.required],
-      idPerfil:         ['', Validators.required],
-      strPwd:           ['', editMode ? [] : [Validators.required, Validators.minLength(6)]],
-      strCorreo:        ['', [Validators.required, Validators.email]],
-      idEstadoUsuario:  [true],
-      strNumeroCelular: ['']
+      strNombreUsuario: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(50)]],
+      idPerfil: ['', [Validators.required]],
+      strPwd: ['', editMode ? [] : [Validators.required, Validators.minLength(6)]],
+      strCorreo: ['', [Validators.required, Validators.email, Validators.maxLength(100)]],
+      idEstadoUsuario: [true],
+      strNumeroCelular: ['', [Validators.pattern('^[0-9]{10}$')]]
     });
   }
 
@@ -286,20 +362,61 @@ export class UsuarioComponent implements OnInit {
     this.loading.set(true);
     this.usuarioService.getAll(page).subscribe({
       next: res => {
-        this.usuarios.set(res.data);
+        const usuariosNormalizados = res.data.map(u => ({
+          ...u,
+          idEstadoUsuario: !!u.idEstadoUsuario
+        }));
+        this.usuarios.set(usuariosNormalizados);
         this.currentPage.set(res.page);
         this.totalPages.set(res.pages);
         this.total.set(res.total);
+        this.aplicarFiltros();
         this.loading.set(false);
       },
       error: () => this.loading.set(false)
     });
   }
 
+  aplicarFiltros() {
+    let filtrados = [...this.usuarios()];
+    
+    if (this.terminoBusqueda.trim()) {
+      const term = this.terminoBusqueda.toLowerCase().trim();
+      filtrados = filtrados.filter(u =>
+        u.strNombreUsuario.toLowerCase().includes(term) ||
+        u.strCorreo.toLowerCase().includes(term) ||
+        (u.strNombrePerfil && u.strNombrePerfil.toLowerCase().includes(term))
+      );
+    }
+    
+    if (this.filtroEstado === 'activo') {
+      filtrados = filtrados.filter(u => u.idEstadoUsuario === true);
+    } else if (this.filtroEstado === 'inactivo') {
+      filtrados = filtrados.filter(u => u.idEstadoUsuario === false);
+    }
+    
+    this.usuariosFiltrados.set(filtrados);
+  }
+
+  onBuscar() { this.aplicarFiltros(); }
+  limpiarBusqueda() {
+    this.terminoBusqueda = '';
+    this.filtroEstado = '';
+    this.aplicarFiltros();
+  }
+
   openForm() {
     this.editingId.set(null);
     this.formError.set('');
     this.buildForm(false);
+    this.form.reset({
+      strNombreUsuario: '',
+      idPerfil: '',
+      strPwd: '',
+      strCorreo: '',
+      idEstadoUsuario: true,
+      strNumeroCelular: ''
+    });
     this.showForm.set(true);
   }
 
@@ -307,12 +424,17 @@ export class UsuarioComponent implements OnInit {
     this.editingId.set(u.id!);
     this.formError.set('');
     this.buildForm(true);
-    this.form.patchValue({ ...u, strPwd: '' });
+    this.form.patchValue({
+      strNombreUsuario: u.strNombreUsuario,
+      idPerfil: u.idPerfil,
+      strCorreo: u.strCorreo,
+      idEstadoUsuario: u.idEstadoUsuario,  // ✅ CORREGIDO: ya es boolean
+      strNumeroCelular: u.strNumeroCelular || ''
+    });
     this.showForm.set(true);
   }
 
   viewDetail(u: Usuario) { this.detailItem.set(u); }
-
   closeForm() { this.showForm.set(false); }
 
   isInvalid(f: string) {
@@ -322,20 +444,35 @@ export class UsuarioComponent implements OnInit {
 
   saveForm() {
     this.form.markAllAsTouched();
-    if (this.form.invalid) return;
+    if (this.form.invalid) {
+      const errors: string[] = [];
+      if (this.form.get('strNombreUsuario')?.errors) errors.push('Nombre de usuario inválido');
+      if (this.form.get('strCorreo')?.errors) errors.push('Correo electrónico inválido');
+      if (this.form.get('strNumeroCelular')?.errors) errors.push('Número celular debe tener 10 dígitos');
+      if (errors.length > 0) this.formError.set(errors.join(', '));
+      return;
+    }
+    
     this.saving.set(true);
     this.formError.set('');
-
     const val = this.form.value;
     if (!val.strPwd) delete val.strPwd;
+    val.idEstadoUsuario = val.idEstadoUsuario ? 1 : 0;
 
     const req = this.editingId()
       ? this.usuarioService.update(this.editingId()!, val)
       : this.usuarioService.create(val);
 
     req.subscribe({
-      next: () => { this.saving.set(false); this.closeForm(); this.loadPage(this.currentPage()); },
-      error: err => { this.saving.set(false); this.formError.set(err.error?.message || 'Error al guardar'); }
+      next: () => {
+        this.saving.set(false);
+        this.closeForm();
+        this.loadPage(this.currentPage());
+      },
+      error: err => {
+        this.saving.set(false);
+        this.formError.set(err.error?.message || 'Error al guardar');
+      }
     });
   }
 
@@ -357,17 +494,28 @@ export class UsuarioComponent implements OnInit {
   onFileSelected(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
+    
+    const tiposPermitidos = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!tiposPermitidos.includes(file.type)) {
+      this.uploadError.set('Solo se permiten imágenes JPG, PNG, GIF o WEBP');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      this.uploadError.set('La imagen no puede superar los 2MB');
+      return;
+    }
+    
     this.selectedFile.set(file);
     const reader = new FileReader();
     reader.onload = () => this.previewUrl.set(reader.result as string);
     reader.readAsDataURL(file);
+    this.uploadError.set('');
   }
 
   uploadImage() {
     if (!this.selectedFile() || !this.uploadTarget()) return;
     this.uploadingImg.set(true);
     this.uploadError.set('');
-
     this.usuarioService.uploadImagen(this.uploadTarget()!.id!, this.selectedFile()!).subscribe({
       next: () => {
         this.uploadingImg.set(false);
