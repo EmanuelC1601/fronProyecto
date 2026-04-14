@@ -4,11 +4,11 @@ import { BreadcrumbComponent } from '../../../shared/components/breadcrumb/bread
 import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
-  selector: 'app-p11',
+  selector: 'app-p12',
   standalone: true,
   imports: [NgIf, NgFor, BreadcrumbComponent],
   template: `
-    <app-breadcrumb [items]="[{label:'Principal 1'},{label:'Principal 1.1'}]" />
+    <app-breadcrumb [items]="[{label:'Principal 1'},{label:'Principal 1.2'}]" />
 
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h5 class="fw-bold mb-0"><i class="bi bi-grid-1x2 me-2 text-primary"></i>Principal 1.2 - Gestión de Elementos</h5>
@@ -71,7 +71,7 @@ import { AuthService } from '../../../core/services/auth.service';
     </div>
   `
 })
-export class P11Component {
+export class P12Component {  // ✅ CORREGIDO: antes era P11Component
   datos = [
     { num: 1, id: 1, nombre: 'Elemento Alpha', descripcion: 'Descripción del elemento alpha con datos de ejemplo', fecha: '2025-01-15', estado: 'Activo' },
     { num: 2, id: 2, nombre: 'Elemento Beta', descripcion: 'Descripción del elemento beta con datos de ejemplo', fecha: '2025-02-20', estado: 'Activo' },
@@ -82,7 +82,7 @@ export class P11Component {
 
   constructor(private authService: AuthService) {}
 
-  p() { return this.authService.getPermisoForModulo('principal1-1'); }
+  p() { return this.authService.getPermisoForModulo('principal1-2'); }  // ✅ CORREGIDO: antes era 'principal1-1'
 
   simularAccion(accion: string, item?: any) {
     const nombre = item ? item.nombre : '';
