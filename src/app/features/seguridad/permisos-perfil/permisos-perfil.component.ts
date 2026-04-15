@@ -1,6 +1,6 @@
 import { Component, OnInit, signal, computed, ChangeDetectorRef } from '@angular/core';
 import { NgFor, NgIf } from '@angular/common';
-import { FormsModule } from '@angular/forms';  // ← IMPORTANTE: Agregar esta línea
+import { FormsModule } from '@angular/forms';
 import { BreadcrumbComponent } from '../../../shared/components/breadcrumb/breadcrumb.component';
 import { PermisosPerfilService } from '../../../core/services/permisos-perfil.service';
 import { PerfilService } from '../../../core/services/perfil.service';
@@ -10,7 +10,7 @@ import { PermisosPerfil, Perfil, Modulo } from '../../../shared/models';
 @Component({
   selector: 'app-permisos-perfil',
   standalone: true,
-  imports: [NgFor, NgIf, FormsModule, BreadcrumbComponent],  // ← Agregar FormsModule aquí
+  imports: [NgFor, NgIf, FormsModule, BreadcrumbComponent],
   template: `
     <app-breadcrumb [items]="[{label:'Seguridad'},{label:'Permisos Perfil'}]" />
 
@@ -76,11 +76,31 @@ import { PermisosPerfil, Perfil, Modulo } from '../../../shared/models';
               <tbody>
                 <tr *ngFor="let modulo of modulosArray()">
                   <td class="text-start fw-semibold">{{ modulo.strNombreModulo }}</td>
-                  <td><input type="checkbox" (change)="onCheckboxChange(modulo.id!, 'bitAgregar', $event)"></td>
-                  <td><input type="checkbox" (change)="onCheckboxChange(modulo.id!, 'bitEditar', $event)"></td>
-                  <td><input type="checkbox" (change)="onCheckboxChange(modulo.id!, 'bitEliminar', $event)"></td>
-                  <td><input type="checkbox" (change)="onCheckboxChange(modulo.id!, 'bitConsulta', $event)"></td>
-                  <td><input type="checkbox" (change)="onCheckboxChange(modulo.id!, 'bitDetalle', $event)"></td>
+                  <td>
+                    <input type="checkbox" 
+                           [checked]="getPermisoValue(modulo.id!, 'bitAgregar')" 
+                           (change)="onCheckboxChange(modulo.id!, 'bitAgregar', $event)">
+                  </td>
+                  <td>
+                    <input type="checkbox" 
+                           [checked]="getPermisoValue(modulo.id!, 'bitEditar')" 
+                           (change)="onCheckboxChange(modulo.id!, 'bitEditar', $event)">
+                  </td>
+                  <td>
+                    <input type="checkbox" 
+                           [checked]="getPermisoValue(modulo.id!, 'bitEliminar')" 
+                           (change)="onCheckboxChange(modulo.id!, 'bitEliminar', $event)">
+                  </td>
+                  <td>
+                    <input type="checkbox" 
+                           [checked]="getPermisoValue(modulo.id!, 'bitConsulta')" 
+                           (change)="onCheckboxChange(modulo.id!, 'bitConsulta', $event)">
+                  </td>
+                  <td>
+                    <input type="checkbox" 
+                           [checked]="getPermisoValue(modulo.id!, 'bitDetalle')" 
+                           (change)="onCheckboxChange(modulo.id!, 'bitDetalle', $event)">
+                  </td>
                 </tr>
                 <tr *ngIf="modulosArray().length === 0">
                   <td colspan="6" class="text-center py-4 text-muted">
@@ -172,12 +192,15 @@ export class PermisosPerfilComponent implements OnInit {
     
     this.ppService.getByPerfil(this.selectedPerfilId).subscribe({
       next: (permisos) => {
+        console.log('📡 Permisos recibidos del backend:', permisos);
+        
         this.permisosData = [];
         
         if (Array.isArray(permisos)) {
           this.permisosData = [...permisos];
         }
         
+        // Asegurar que todos los módulos tengan entrada
         this.modulosArray().forEach(modulo => {
           const existe = this.permisosData.some(p => p.idModulo === modulo.id);
           if (!existe && modulo.id) {
@@ -193,12 +216,24 @@ export class PermisosPerfilComponent implements OnInit {
           }
         });
         
+        console.log('📊 Permisos después de normalizar:', this.permisosData);
+        
         this.permisosOriginalBackup = JSON.parse(JSON.stringify(this.permisosData));
         this.loadingPermisos.set(false);
         this.cdr.detectChanges();
       },
-      error: () => this.loadingPermisos.set(false)
+      error: (err) => {
+        console.error('❌ Error cargando permisos:', err);
+        this.loadingPermisos.set(false);
+      }
     });
+  }
+  
+  // ✅ NUEVO MÉTODO: Obtener el valor actual de un permiso
+  getPermisoValue(moduloId: number, campo: string): boolean {
+    const permiso = this.permisosData.find(p => p.idModulo === moduloId);
+    if (!permiso) return false;
+    return permiso[campo] === true;
   }
   
   onCheckboxChange(moduloId: number, campo: string, event: Event) {
