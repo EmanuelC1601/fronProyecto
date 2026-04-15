@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment.prod';
 import { PermisosPerfil, PaginatedResponse } from '../../shared/models';
 
@@ -18,15 +19,47 @@ export class PermisosPerfilService {
   }
 
   getByPerfil(idPerfil: number) {
-    return this.http.get<PermisosPerfil[]>(`${this.apiUrl}/perfil/${idPerfil}`);
+    return this.http.get<any[]>(`${this.apiUrl}/perfil/${idPerfil}`).pipe(
+      map(permisos => {
+        // Normalizar los datos: convertir cualquier valor a boolean usando !! (doble negación)
+        return permisos.map(p => ({
+          ...p,
+          bitAgregar: !!p.bitAgregar,
+          bitEditar: !!p.bitEditar,
+          bitEliminar: !!p.bitEliminar,
+          bitConsulta: !!p.bitConsulta,
+          bitDetalle: !!p.bitDetalle
+        } as PermisosPerfil));
+      })
+    );
   }
 
   create(data: PermisosPerfil) {
-    return this.http.post<{ id: number; message: string }>(this.apiUrl, data);
+    // Convertir boolean a 1/0 para el backend
+    const payload = {
+      idModulo: data.idModulo,
+      idPerfil: data.idPerfil,
+      bitAgregar: data.bitAgregar ? 1 : 0,
+      bitEditar: data.bitEditar ? 1 : 0,
+      bitEliminar: data.bitEliminar ? 1 : 0,
+      bitConsulta: data.bitConsulta ? 1 : 0,
+      bitDetalle: data.bitDetalle ? 1 : 0
+    };
+    return this.http.post<{ id: number; message: string }>(this.apiUrl, payload);
   }
 
   update(id: number, data: PermisosPerfil) {
-    return this.http.put<{ message: string }>(`${this.apiUrl}/${id}`, data);
+    // Convertir boolean a 1/0 para el backend
+    const payload = {
+      idModulo: data.idModulo,
+      idPerfil: data.idPerfil,
+      bitAgregar: data.bitAgregar ? 1 : 0,
+      bitEditar: data.bitEditar ? 1 : 0,
+      bitEliminar: data.bitEliminar ? 1 : 0,
+      bitConsulta: data.bitConsulta ? 1 : 0,
+      bitDetalle: data.bitDetalle ? 1 : 0
+    };
+    return this.http.put<{ message: string }>(`${this.apiUrl}/${id}`, payload);
   }
 
   delete(id: number) {

@@ -192,44 +192,62 @@ export class PermisosPerfilComponent implements OnInit {
     
     this.ppService.getByPerfil(this.selectedPerfilId).subscribe({
       next: (permisos) => {
-        console.log('📡 Permisos recibidos del backend:', permisos);
-        
-        this.permisosData = [];
+        // Crear un mapa con los permisos existentes
+        const permisosMap = new Map();
         
         if (Array.isArray(permisos)) {
-          this.permisosData = [...permisos];
+          permisos.forEach(p => {
+            if (p.idModulo) {
+              permisosMap.set(p.idModulo, {
+                id: p.id,
+                idPerfil: p.idPerfil,
+                idModulo: p.idModulo,
+                bitAgregar: p.bitAgregar === true,
+                bitEditar: p.bitEditar === true,
+                bitEliminar: p.bitEliminar === true,
+                bitConsulta: p.bitConsulta === true,
+                bitDetalle: p.bitDetalle === true
+              });
+            }
+          });
         }
         
-        // Asegurar que todos los módulos tengan entrada
+        // Construir el arreglo de permisos para todos los módulos
+        this.permisosData = [];
+        
         this.modulosArray().forEach(modulo => {
-          const existe = this.permisosData.some(p => p.idModulo === modulo.id);
-          if (!existe && modulo.id) {
-            this.permisosData.push({
-              idPerfil: this.selectedPerfilId,
-              idModulo: modulo.id,
-              bitAgregar: false,
-              bitEditar: false,
-              bitEliminar: false,
-              bitConsulta: false,
-              bitDetalle: false
-            });
+          const moduloId = modulo.id;
+          if (moduloId) {
+            const permisoExistente = permisosMap.get(moduloId);
+            
+            if (permisoExistente) {
+              this.permisosData.push({ ...permisoExistente });
+            } else {
+              this.permisosData.push({
+                idPerfil: this.selectedPerfilId,
+                idModulo: moduloId,
+                bitAgregar: false,
+                bitEditar: false,
+                bitEliminar: false,
+                bitConsulta: false,
+                bitDetalle: false
+              });
+            }
           }
         });
-        
-        console.log('📊 Permisos después de normalizar:', this.permisosData);
         
         this.permisosOriginalBackup = JSON.parse(JSON.stringify(this.permisosData));
         this.loadingPermisos.set(false);
         this.cdr.detectChanges();
       },
       error: (err) => {
-        console.error('❌ Error cargando permisos:', err);
+        console.error('Error cargando permisos:', err);
         this.loadingPermisos.set(false);
+        alert('Error al cargar los permisos del perfil');
       }
     });
   }
   
-  // ✅ NUEVO MÉTODO: Obtener el valor actual de un permiso
   getPermisoValue(moduloId: number, campo: string): boolean {
     const permiso = this.permisosData.find(p => p.idModulo === moduloId);
     if (!permiso) return false;
@@ -244,25 +262,32 @@ export class PermisosPerfilComponent implements OnInit {
       permiso[campo] = valor;
     }
     
-    // Detectar si hay cambios comparando con el backup
-    this.hayCambios = this.permisosData.some((p, index) => {
-      const orig = this.permisosOriginalBackup[index];
-      if (!orig) return true;
-      return (p.bitAgregar !== orig.bitAgregar ||
-              p.bitEditar !== orig.bitEditar ||
-              p.bitEliminar !== orig.bitEliminar ||
-              p.bitConsulta !== orig.bitConsulta ||
-              p.bitDetalle !== orig.bitDetalle);
-    });
+    // Detectar si hay cambios
+    this.hayCambios = false;
+    for (let i = 0; i < this.permisosData.length; i++) {
+      const actual = this.permisosData[i];
+      const original = this.permisosOriginalBackup[i];
+      
+      if (!original) {
+        this.hayCambios = true;
+        break;
+      }
+      
+      if (actual.bitAgregar !== original.bitAgregar ||
+          actual.bitEditar !== original.bitEditar ||
+          actual.bitEliminar !== original.bitEliminar ||
+          actual.bitConsulta !== original.bitConsulta ||
+          actual.bitDetalle !== original.bitDetalle) {
+        this.hayCambios = true;
+        break;
+      }
+    }
     
-    console.log(`🔄 Cambio en módulo ${moduloId}, ${campo} = ${valor}`);
-    console.log(`📊 Hay cambios: ${this.hayCambios}`);
     this.cdr.detectChanges();
   }
   
   guardarCambios() {
     if (!this.selectedPerfilId || !this.hayCambios) {
-      console.log('❌ No hay cambios para guardar');
       return;
     }
     
@@ -277,8 +302,6 @@ export class PermisosPerfilComponent implements OnInit {
               permiso.bitConsulta !== original.bitConsulta ||
               permiso.bitDetalle !== original.bitDetalle);
     });
-    
-    console.log(`💾 Guardando ${permisosAGuardar.length} permisos modificados...`);
     
     const promises = permisosAGuardar.map(permiso => {
       if (permiso.id) {
@@ -297,7 +320,7 @@ export class PermisosPerfilComponent implements OnInit {
         this.cdr.detectChanges();
       })
       .catch(err => {
-        console.error('❌ Error guardando permisos:', err);
+        console.error('Error guardando permisos:', err);
         this.saving.set(false);
         alert('❌ Error al guardar los permisos');
       });
