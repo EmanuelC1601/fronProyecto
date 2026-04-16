@@ -1,5 +1,6 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { NgFor, NgIf } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors } from '@angular/forms';
 import { BreadcrumbComponent } from '../../../shared/components/breadcrumb/breadcrumb.component';
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
@@ -10,7 +11,7 @@ import { Perfil } from '../../../shared/models';
 @Component({
   selector: 'app-perfil',
   standalone: true,
-  imports: [NgFor, NgIf, ReactiveFormsModule, BreadcrumbComponent, PaginationComponent],
+  imports: [NgFor, NgIf, FormsModule, ReactiveFormsModule, BreadcrumbComponent, PaginationComponent],
   template: `
     <app-breadcrumb [items]="[{label:'Seguridad'},{label:'Perfil'}]" />
 
@@ -21,14 +22,52 @@ import { Perfil } from '../../../shared/models';
       </button>
     </div>
 
-    <!-- Tabla -->
+    <!-- 🔍 BARRA DE BÚSQUEDA Y FILTROS -->
+    <div class="card mb-3">
+      <div class="card-body py-2">
+        <div class="row g-2 align-items-center">
+          <div class="col-md-6">
+            <div class="input-group">
+              <span class="input-group-text bg-white">
+                <i class="bi bi-search"></i>
+              </span>
+              <input type="text" 
+                     class="form-control" 
+                     placeholder="Buscar por nombre del perfil o descripción..."
+                     [(ngModel)]="terminoBusqueda"
+                     (ngModelChange)="aplicarFiltros()">
+              <button *ngIf="terminoBusqueda" 
+                      class="btn btn-outline-secondary" 
+                      type="button" 
+                      (click)="limpiarBusqueda()">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <select class="form-select" [(ngModel)]="filtroAdmin" (ngModelChange)="aplicarFiltros()">
+              <option value="">Todos los perfiles</option>
+              <option value="admin">Solo Administradores</option>
+              <option value="no-admin">No Administradores</option>
+            </select>
+          </div>
+          <div class="col-md-3 text-md-end">
+            <span class="text-muted small">
+              <i class="bi bi-info-circle"></i>
+              {{ perfilesFiltrados().length }} de {{ total() }} perfiles
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla (sin columna de ID) -->
     <div class="card">
       <div class="card-body p-0">
         <div class="table-responsive">
           <table class="table table-hover align-middle mb-0">
             <thead>
               <tr>
-                <th>#</th>
                 <th>Nombre del Perfil</th>
                 <th>Administrador</th>
                 <th>Descripción</th>
@@ -38,17 +77,22 @@ import { Perfil } from '../../../shared/models';
             </thead>
             <tbody>
               <tr *ngIf="loading()">
-                <td colspan="5" class="text-center py-4">
+                <td colspan="4" class="text-center py-4">
                   <div class="spinner-border spinner-border-sm text-primary"></div>
                   Cargando...
                 </td>
-              </tr>
-              <tr *ngIf="!loading() && perfiles().length === 0">
-                <td colspan="5" class="text-center py-4 text-muted">Sin registros</td>
-              </tr>
-              <tr *ngFor="let p of perfiles()">
-                <td class="text-muted small">{{ p.id }}</td>
-                <td class="fw-semibold">{{ p.strNombrePerfil }}</td>
+               </tr>
+              <tr *ngIf="!loading() && perfilesFiltrados().length === 0">
+                <td colspan="4" class="text-center py-4 text-muted">
+                  <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                  No se encontraron perfiles
+                </td>
+               </tr>
+              <tr *ngFor="let p of perfilesFiltrados()">
+                <td class="fw-semibold">
+                  <i class="bi bi-person-badge me-2 text-primary"></i>
+                  {{ p.strNombrePerfil }}
+                </td>
                 <td>
                   <span class="badge" [class]="p.bitAdministrador ? 'bg-success' : 'bg-secondary'">
                     {{ p.bitAdministrador ? 'Sí' : 'No' }}
@@ -72,7 +116,7 @@ import { Perfil } from '../../../shared/models';
                     <i class="bi bi-trash"></i>
                   </button>
                 </td>
-              </tr>
+               </tr>
             </tbody>
           </table>
         </div>
@@ -86,7 +130,7 @@ import { Perfil } from '../../../shared/models';
       </div>
     </div>
 
-    <!-- Modal detalle -->
+    <!-- Modal detalle (el ID se muestra AQUÍ) -->
     <div *ngIf="detailItem()" class="modal-backdrop-custom" (click)="detailItem.set(null)">
       <div class="card shadow-lg" style="width:400px;" (click)="$event.stopPropagation()">
         <div class="card-header d-flex justify-content-between align-items-center">
@@ -208,6 +252,7 @@ import { Perfil } from '../../../shared/models';
 })
 export class PerfilComponent implements OnInit {
   perfiles     = signal<Perfil[]>([]);
+  perfilesFiltrados = signal<Perfil[]>([]);
   loading      = signal(true);
   currentPage  = signal(1);
   totalPages   = signal(1);
@@ -220,6 +265,10 @@ export class PerfilComponent implements OnInit {
   descripcionLength = signal(0);
   permisos     = signal({ bitAgregar: false, bitEditar: false, bitEliminar: false,
                           bitConsulta: false, bitDetalle: false });
+
+  // Variables para búsqueda y filtros
+  terminoBusqueda: string = '';
+  filtroAdmin: string = '';
 
   form!: FormGroup;
 
@@ -280,9 +329,40 @@ export class PerfilComponent implements OnInit {
         this.totalPages.set(res.pages);
         this.total.set(res.total);
         this.loading.set(false);
+        this.aplicarFiltros();
       },
       error: () => this.loading.set(false)
     });
+  }
+
+  // 🔍 Aplicar filtros de búsqueda y tipo de administrador
+  aplicarFiltros() {
+    let filtrados = [...this.perfiles()];
+    
+    // Filtro por texto (nombre o descripción)
+    if (this.terminoBusqueda.trim()) {
+      const term = this.terminoBusqueda.toLowerCase().trim();
+      filtrados = filtrados.filter(p =>
+        p.strNombrePerfil.toLowerCase().includes(term) ||
+        (p.strDescripcion && p.strDescripcion.toLowerCase().includes(term))
+      );
+    }
+    
+    // Filtro por tipo de administrador
+    if (this.filtroAdmin === 'admin') {
+      filtrados = filtrados.filter(p => p.bitAdministrador === true);
+    } else if (this.filtroAdmin === 'no-admin') {
+      filtrados = filtrados.filter(p => p.bitAdministrador === false);
+    }
+    
+    this.perfilesFiltrados.set(filtrados);
+  }
+
+  // Limpiar búsqueda y filtros
+  limpiarBusqueda() {
+    this.terminoBusqueda = '';
+    this.filtroAdmin = '';
+    this.aplicarFiltros();
   }
 
   openForm() {

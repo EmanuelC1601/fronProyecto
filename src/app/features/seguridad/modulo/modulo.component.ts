@@ -1,5 +1,6 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { NgFor, NgIf } from '@angular/common';
+import { FormsModule } from '@angular/forms';  // 👈 IMPORTANTE: Agregar esta línea
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors } from '@angular/forms';
 import { BreadcrumbComponent } from '../../../shared/components/breadcrumb/breadcrumb.component';
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
@@ -10,7 +11,7 @@ import { Modulo } from '../../../shared/models';
 @Component({
   selector: 'app-modulo',
   standalone: true,
-  imports: [NgFor, NgIf, ReactiveFormsModule, BreadcrumbComponent, PaginationComponent],
+  imports: [NgFor, NgIf, FormsModule, ReactiveFormsModule, BreadcrumbComponent, PaginationComponent],  // 👈 Agregar FormsModule aquí
   template: `
     <app-breadcrumb [items]="[{label:'Seguridad'},{label:'Módulo'}]" />
 
@@ -21,13 +22,44 @@ import { Modulo } from '../../../shared/models';
       </button>
     </div>
 
+    <!-- 🔍 BARRA DE BÚSQUEDA -->
+    <div class="card mb-3">
+      <div class="card-body py-2">
+        <div class="row g-2 align-items-center">
+          <div class="col-md-8">
+            <div class="input-group">
+              <span class="input-group-text bg-white">
+                <i class="bi bi-search"></i>
+              </span>
+              <input type="text" 
+                     class="form-control" 
+                     placeholder="Buscar por nombre del módulo..."
+                     [(ngModel)]="terminoBusqueda"
+                     (ngModelChange)="aplicarFiltros()">
+              <button *ngIf="terminoBusqueda" 
+                      class="btn btn-outline-secondary" 
+                      type="button" 
+                      (click)="limpiarBusqueda()">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+          </div>
+          <div class="col-md-4 text-md-end">
+            <span class="text-muted small">
+              <i class="bi bi-info-circle"></i>
+              {{ modulosFiltrados().length }} de {{ total() }} módulos
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="card">
       <div class="card-body p-0">
         <div class="table-responsive">
           <table class="table table-hover align-middle mb-0">
             <thead>
               <tr>
-                <th>#</th>
                 <th>Nombre del Módulo</th>
                 <th *ngIf="permisos().bitEditar || permisos().bitEliminar || permisos().bitDetalle"
                     class="text-center">Acciones</th>
@@ -35,16 +67,21 @@ import { Modulo } from '../../../shared/models';
             </thead>
             <tbody>
               <tr *ngIf="loading()">
-                <td colspan="3" class="text-center py-4">
+                <td colspan="2" class="text-center py-4">
                   <div class="spinner-border spinner-border-sm text-primary"></div> Cargando...
                 </td>
               </tr>
-              <tr *ngIf="!loading() && modulos().length === 0">
-                <td colspan="3" class="text-center py-4 text-muted">Sin registros</td>
+              <tr *ngIf="!loading() && modulosFiltrados().length === 0">
+                <td colspan="2" class="text-center py-4 text-muted">
+                  <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                  No se encontraron módulos
+                </td>
               </tr>
-              <tr *ngFor="let m of modulos()">
-                <td class="text-muted small">{{ m.id }}</td>
-                <td class="fw-semibold">{{ m.strNombreModulo }}</td>
+              <tr *ngFor="let m of modulosFiltrados()">
+                <td class="fw-semibold">
+                  <i class="bi bi-grid me-2 text-primary"></i>
+                  {{ m.strNombreModulo }}
+                </td>
                 <td class="text-center" *ngIf="permisos().bitEditar || permisos().bitEliminar || permisos().bitDetalle">
                   <button *ngIf="permisos().bitDetalle"
                           class="btn btn-sm btn-outline-info me-1"
@@ -153,6 +190,7 @@ import { Modulo } from '../../../shared/models';
 })
 export class ModuloComponent implements OnInit {
   modulos     = signal<Modulo[]>([]);
+  modulosFiltrados = signal<Modulo[]>([]);
   loading     = signal(true);
   currentPage = signal(1);
   totalPages  = signal(1);
@@ -164,6 +202,10 @@ export class ModuloComponent implements OnInit {
   detailItem  = signal<Modulo | null>(null);
   permisos    = signal({ bitAgregar: false, bitEditar: false, bitEliminar: false,
                          bitConsulta: false, bitDetalle: false });
+  
+  // Variable para búsqueda
+  terminoBusqueda: string = '';
+  
   form!: FormGroup;
 
   // Validador personalizado: No solo espacios
@@ -206,9 +248,30 @@ export class ModuloComponent implements OnInit {
         this.totalPages.set(res.pages);
         this.total.set(res.total);
         this.loading.set(false);
+        this.aplicarFiltros();
       },
       error: () => this.loading.set(false)
     });
+  }
+
+  // 🔍 Aplicar filtro de búsqueda
+  aplicarFiltros() {
+    let filtrados = [...this.modulos()];
+    
+    if (this.terminoBusqueda.trim()) {
+      const term = this.terminoBusqueda.toLowerCase().trim();
+      filtrados = filtrados.filter(m =>
+        m.strNombreModulo.toLowerCase().includes(term)
+      );
+    }
+    
+    this.modulosFiltrados.set(filtrados);
+  }
+
+  // Limpiar búsqueda
+  limpiarBusqueda() {
+    this.terminoBusqueda = '';
+    this.aplicarFiltros();
   }
 
   openForm() {

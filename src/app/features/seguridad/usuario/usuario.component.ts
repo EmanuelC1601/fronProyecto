@@ -256,7 +256,7 @@ import { Usuario, Perfil } from '../../../shared/models';
                   <span *ngIf="form.get('strPwd')?.hasError('required')">La contraseña es requerida</span>
                   <span *ngIf="form.get('strPwd')?.hasError('minlength')">Mínimo 6 caracteres</span>
                   <span *ngIf="form.get('strPwd')?.hasError('maxlength')">Máximo 50 caracteres</span>
-                  <span *ngIf="form.get('strPwd')?.hasError('pattern')">Debe contener al menos una letra y un número</span>
+                  <span *ngIf="form.get('strPwd')?.hasError('weakPassword')">Debe contener al menos una letra y un número</span>
                 </div>
               </div>
 
@@ -284,14 +284,22 @@ import { Usuario, Perfil } from '../../../shared/models';
                 </div>
               </div>
 
-              <!-- Teléfono -->
+              <!-- Teléfono - CON LIMITACIÓN DE 10 DÍGITOS -->
               <div class="col-12">
                 <label class="form-label fw-semibold">Número Celular</label>
-                <input type="tel" class="form-control" formControlName="strNumeroCelular"
+                <input type="tel" 
+                       class="form-control" 
+                       formControlName="strNumeroCelular"
                        placeholder="10 dígitos (ej: 5512345678)"
-                       [class.is-invalid]="isInvalid('strNumeroCelular')">
+                       [class.is-invalid]="isInvalid('strNumeroCelular')"
+                       maxlength="10"
+                       (keypress)="soloNumeros($event)"
+                       (input)="limitarTelefono($event)">
                 <div class="invalid-feedback">
-                  <span *ngIf="form.get('strNumeroCelular')?.hasError('pattern')">Debe tener exactamente 10 dígitos</span>
+                  <span *ngIf="form.get('strNumeroCelular')?.hasError('pattern')">Debe tener exactamente 10 dígitos numéricos</span>
+                </div>
+                <div class="form-text text-muted small">
+                  <i class="bi bi-info-circle"></i> Ingrese solo números, máximo 10 dígitos
                 </div>
               </div>
             </div>
@@ -382,6 +390,28 @@ export class UsuarioComponent implements OnInit {
     const hasNumber = /[0-9]/.test(value);
     
     return hasLetter && hasNumber ? null : { weakPassword: true };
+  }
+
+  // 🚫 Validar que solo se ingresen números en el teléfono
+  soloNumeros(event: KeyboardEvent): void {
+    const charCode = event.which ? event.which : event.keyCode;
+    // Permitir: números (48-57), teclas de control (backspace, tab, delete, flechas)
+    if (charCode > 31 && (charCode < 48 || charCode > 57)) {
+      event.preventDefault();
+    }
+  }
+
+  // 🔢 Limitar el teléfono a exactamente 10 dígitos
+  limitarTelefono(event: any): void {
+    let valor = event.target.value;
+    // Eliminar cualquier caracter que no sea número
+    valor = valor.replace(/[^0-9]/g, '');
+    // Limitar a 10 caracteres
+    if (valor.length > 10) {
+      valor = valor.slice(0, 10);
+    }
+    // Actualizar el valor del campo sin emitir evento para evitar bucle
+    this.form.get('strNumeroCelular')?.setValue(valor, { emitEvent: false });
   }
 
   constructor(
@@ -519,7 +549,7 @@ export class UsuarioComponent implements OnInit {
       const errors: string[] = [];
       if (this.form.get('strNombreUsuario')?.errors) errors.push('Nombre de usuario inválido');
       if (this.form.get('strCorreo')?.errors) errors.push('Correo electrónico inválido');
-      if (this.form.get('strNumeroCelular')?.errors) errors.push('Número celular debe tener 10 dígitos');
+      if (this.form.get('strNumeroCelular')?.errors) errors.push('Número celular debe tener exactamente 10 dígitos');
       if (errors.length > 0) this.formError.set(errors.join(', '));
       return;
     }
