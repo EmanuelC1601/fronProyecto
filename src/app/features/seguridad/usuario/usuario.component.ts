@@ -421,18 +421,18 @@ export class UsuarioComponent implements OnInit {
   }
 
   editUsuario(u: Usuario) {
-    this.editingId.set(u.id!);
-    this.formError.set('');
-    this.buildForm(true);
-    this.form.patchValue({
-      strNombreUsuario: u.strNombreUsuario,
-      idPerfil: u.idPerfil,
-      strCorreo: u.strCorreo,
-      idEstadoUsuario: u.idEstadoUsuario,  // ✅ CORREGIDO: ya es boolean
-      strNumeroCelular: u.strNumeroCelular || ''
-    });
-    this.showForm.set(true);
-  }
+  this.editingId.set(u.id!);
+  this.formError.set('');
+  this.buildForm(true);
+  this.form.patchValue({
+    strNombreUsuario: u.strNombreUsuario,
+    idPerfil: u.idPerfil,
+    strCorreo: u.strCorreo,
+    idEstadoUsuario: u.idEstadoUsuario === true,  // Asegurar boolean
+    strNumeroCelular: u.strNumeroCelular || ''
+  });
+  this.showForm.set(true);
+}
 
   viewDetail(u: Usuario) { this.detailItem.set(u); }
   closeForm() { this.showForm.set(false); }
@@ -443,38 +443,61 @@ export class UsuarioComponent implements OnInit {
   }
 
   saveForm() {
-    this.form.markAllAsTouched();
-    if (this.form.invalid) {
-      const errors: string[] = [];
-      if (this.form.get('strNombreUsuario')?.errors) errors.push('Nombre de usuario inválido');
-      if (this.form.get('strCorreo')?.errors) errors.push('Correo electrónico inválido');
-      if (this.form.get('strNumeroCelular')?.errors) errors.push('Número celular debe tener 10 dígitos');
-      if (errors.length > 0) this.formError.set(errors.join(', '));
-      return;
-    }
-    
-    this.saving.set(true);
-    this.formError.set('');
-    const val = this.form.value;
-    if (!val.strPwd) delete val.strPwd;
-    val.idEstadoUsuario = val.idEstadoUsuario ? 1 : 0;
-
-    const req = this.editingId()
-      ? this.usuarioService.update(this.editingId()!, val)
-      : this.usuarioService.create(val);
-
-    req.subscribe({
-      next: () => {
-        this.saving.set(false);
-        this.closeForm();
-        this.loadPage(this.currentPage());
-      },
-      error: err => {
-        this.saving.set(false);
-        this.formError.set(err.error?.message || 'Error al guardar');
-      }
-    });
+  this.form.markAllAsTouched();
+  if (this.form.invalid) {
+    const errors: string[] = [];
+    if (this.form.get('strNombreUsuario')?.errors) errors.push('Nombre de usuario inválido');
+    if (this.form.get('strCorreo')?.errors) errors.push('Correo electrónico inválido');
+    if (this.form.get('strNumeroCelular')?.errors) errors.push('Número celular debe tener 10 dígitos');
+    if (errors.length > 0) this.formError.set(errors.join(', '));
+    return;
   }
+  
+  this.saving.set(true);
+  this.formError.set('');
+  
+  // Obtener valores del formulario
+  const formValues = this.form.value;
+  
+  // Construir objeto para enviar
+  const payload: any = {
+    strNombreUsuario: formValues.strNombreUsuario,
+    idPerfil: formValues.idPerfil,
+    strCorreo: formValues.strCorreo,
+    idEstadoUsuario: formValues.idEstadoUsuario ? 1 : 0,  // Convertir a número
+    strNumeroCelular: formValues.strNumeroCelular || ''
+  };
+  
+  // Incluir contraseña solo si se proporcionó (para edición) o siempre para nuevo
+  if (formValues.strPwd && formValues.strPwd.trim() !== '') {
+    payload.strPwd = formValues.strPwd;
+  } else if (!this.editingId()) {
+    // Si es nuevo usuario y no hay contraseña, error
+    this.formError.set('La contraseña es requerida');
+    this.saving.set(false);
+    return;
+  }
+  
+  console.log('Enviando payload:', payload);
+  
+  const req = this.editingId()
+    ? this.usuarioService.update(this.editingId()!, payload)
+    : this.usuarioService.create(payload);
+
+  req.subscribe({
+    next: () => {
+      this.saving.set(false);
+      this.closeForm();
+      this.loadPage(this.currentPage());
+      alert(this.editingId() ? '✅ Usuario actualizado correctamente' : '✅ Usuario creado correctamente');
+    },
+    error: (err) => {
+      this.saving.set(false);
+      console.error('Error:', err);
+      this.formError.set(err.error?.message || 'Error al guardar el usuario');
+    }
+  });
+}
 
   deleteUsuario(u: Usuario) {
     if (!confirm(`¿Eliminar al usuario "${u.strNombreUsuario}"?`)) return;
