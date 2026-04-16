@@ -1,6 +1,6 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { NgFor, NgIf } from '@angular/common';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors } from '@angular/forms';
 import { BreadcrumbComponent } from '../../../shared/components/breadcrumb/breadcrumb.component';
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
 import { ModuloService } from '../../../core/services/modulo.service';
@@ -96,9 +96,9 @@ import { Modulo } from '../../../shared/models';
       </div>
     </div>
 
-    <!-- Modal formulario -->
+    <!-- Modal formulario con validaciones -->
     <div *ngIf="showForm()" class="modal-backdrop-custom">
-      <div class="card shadow-lg" style="width:420px;">
+      <div class="card shadow-lg" style="width:450px;">
         <div class="card-header d-flex justify-content-between align-items-center">
           <span class="fw-bold">
             <i class="bi bi-grid me-2 text-primary"></i>
@@ -115,14 +115,25 @@ import { Modulo } from '../../../shared/models';
               <label class="form-label fw-semibold">Nombre del Módulo *</label>
               <input type="text" class="form-control"
                      formControlName="strNombreModulo"
-                     placeholder="Ej: perfil"
+                     placeholder="Ej: perfil, usuario, seguridad"
                      [class.is-invalid]="isInvalid('strNombreModulo')" />
-              <div class="invalid-feedback">Campo requerido.</div>
+              <div class="invalid-feedback">
+                <span *ngIf="form.get('strNombreModulo')?.hasError('required')">El nombre del módulo es requerido</span>
+                <span *ngIf="form.get('strNombreModulo')?.hasError('minlength')">Mínimo 3 caracteres</span>
+                <span *ngIf="form.get('strNombreModulo')?.hasError('maxlength')">Máximo 50 caracteres</span>
+                <span *ngIf="form.get('strNombreModulo')?.hasError('pattern')">Solo letras minúsculas, números y guiones</span>
+                <span *ngIf="form.get('strNombreModulo')?.hasError('noWhitespace')">No puede contener solo espacios</span>
+              </div>
+              <div class="form-text text-muted small mt-1">
+                <i class="bi bi-info-circle"></i>
+                Usa solo letras minúsculas, números y guiones (ej: mi-modulo-1)
+              </div>
             </div>
             <div class="d-flex gap-2 justify-content-end">
               <button type="button" class="btn btn-secondary btn-sm" (click)="closeForm()">Cancelar</button>
-              <button type="submit" class="btn btn-primary btn-sm" [disabled]="saving()">
+              <button type="submit" class="btn btn-primary btn-sm" [disabled]="saving() || form.invalid">
                 <span *ngIf="saving()" class="spinner-border spinner-border-sm me-1"></span>
+                <i class="bi bi-save me-1"></i>
                 {{ editingId() ? 'Actualizar' : 'Guardar' }}
               </button>
             </div>
@@ -131,7 +142,14 @@ import { Modulo } from '../../../shared/models';
       </div>
     </div>
   `,
-  styles: [`.modal-backdrop-custom{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:1050;}`]
+  styles: [`
+    .modal-backdrop-custom {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1050;
+    }
+  `]
 })
 export class ModuloComponent implements OnInit {
   modulos     = signal<Modulo[]>([]);
@@ -148,6 +166,12 @@ export class ModuloComponent implements OnInit {
                          bitConsulta: false, bitDetalle: false });
   form!: FormGroup;
 
+  // Validador personalizado: No solo espacios
+  noWhitespaceValidator(control: AbstractControl): ValidationErrors | null {
+    const isWhitespace = (control.value || '').trim().length === 0;
+    return isWhitespace ? { noWhitespace: true } : null;
+  }
+
   constructor(
     private moduloService: ModuloService,
     private authService: AuthService,
@@ -157,8 +181,20 @@ export class ModuloComponent implements OnInit {
   ngOnInit() {
     const p = this.authService.getPermisoForModulo('modulo');
     if (p) this.permisos.set(p as any);
-    this.form = this.fb.group({ strNombreModulo: ['', Validators.required] });
+    this.buildForm();
     this.loadPage(1);
+  }
+
+  buildForm() {
+    this.form = this.fb.group({
+      strNombreModulo: ['', [
+        Validators.required,
+        Validators.minLength(3),
+        Validators.maxLength(50),
+        Validators.pattern(/^[a-z0-9-]+$/),
+        this.noWhitespaceValidator
+      ]]
+    });
   }
 
   loadPage(page: number) {
@@ -178,18 +214,22 @@ export class ModuloComponent implements OnInit {
   openForm() {
     this.editingId.set(null);
     this.formError.set('');
-    this.form.reset();
+    this.buildForm();
+    this.form.reset({ strNombreModulo: '' });
     this.showForm.set(true);
   }
 
   editModulo(m: Modulo) {
     this.editingId.set(m.id!);
     this.formError.set('');
-    this.form.patchValue(m);
+    this.buildForm();
+    this.form.patchValue({ strNombreModulo: m.strNombreModulo });
     this.showForm.set(true);
   }
 
-  closeForm() { this.showForm.set(false); }
+  closeForm() { 
+    this.showForm.set(false); 
+  }
 
   isInvalid(f: string) {
     const c = this.form.get(f);
@@ -198,16 +238,47 @@ export class ModuloComponent implements OnInit {
 
   saveForm() {
     this.form.markAllAsTouched();
-    if (this.form.invalid) return;
+    
+    if (this.form.invalid) {
+      const nombreControl = this.form.get('strNombreModulo');
+      if (nombreControl?.hasError('required')) {
+        this.formError.set('El nombre del módulo es requerido');
+      } else if (nombreControl?.hasError('minlength')) {
+        this.formError.set('El nombre del módulo debe tener al menos 3 caracteres');
+      } else if (nombreControl?.hasError('maxlength')) {
+        this.formError.set('El nombre del módulo no puede exceder 50 caracteres');
+      } else if (nombreControl?.hasError('pattern')) {
+        this.formError.set('El nombre del módulo solo puede contener letras minúsculas, números y guiones');
+      } else if (nombreControl?.hasError('noWhitespace')) {
+        this.formError.set('El nombre del módulo no puede contener solo espacios');
+      } else {
+        this.formError.set('Por favor complete el campo correctamente');
+      }
+      return;
+    }
+    
     this.saving.set(true);
+    this.formError.set('');
 
-    const req = this.editingId()
-      ? this.moduloService.update(this.editingId()!, this.form.value)
-      : this.moduloService.create(this.form.value);
+    // Limpiar el valor (trim)
+    const valor = this.form.value.strNombreModulo.trim().toLowerCase();
+    const data = { strNombreModulo: valor };
+    const id = this.editingId();
+
+    const req = id
+      ? this.moduloService.update(id, data)
+      : this.moduloService.create(data);
 
     req.subscribe({
-      next: () => { this.saving.set(false); this.closeForm(); this.loadPage(this.currentPage()); },
-      error: err => { this.saving.set(false); this.formError.set(err.error?.message || 'Error al guardar'); }
+      next: () => { 
+        this.saving.set(false); 
+        this.closeForm(); 
+        this.loadPage(this.currentPage()); 
+      },
+      error: err => { 
+        this.saving.set(false); 
+        this.formError.set(err.error?.message || 'Error al guardar el módulo'); 
+      }
     });
   }
 
@@ -215,7 +286,7 @@ export class ModuloComponent implements OnInit {
     if (!confirm(`¿Eliminar el módulo "${m.strNombreModulo}"?`)) return;
     this.moduloService.delete(m.id!).subscribe({
       next: () => this.loadPage(this.currentPage()),
-      error: err => alert(err.error?.message || 'Error al eliminar')
+      error: err => alert(err.error?.message || 'Error al eliminar el módulo')
     });
   }
 }

@@ -1,6 +1,6 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { NgFor, NgIf } from '@angular/common';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import { BreadcrumbComponent } from '../../../shared/components/breadcrumb/breadcrumb.component';
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
@@ -206,7 +206,7 @@ import { Usuario, Perfil } from '../../../shared/models';
 
     <!-- Modal formulario -->
     <div *ngIf="showForm()" class="modal-backdrop-custom">
-      <div class="card shadow-lg" style="width:520px;max-height:90vh;overflow-y:auto;">
+      <div class="card shadow-lg" style="width:550px;max-height:90vh;overflow-y:auto;">
         <div class="card-header d-flex justify-content-between align-items-center">
           <span class="fw-bold">
             <i class="bi bi-person me-2 text-primary"></i>
@@ -218,36 +218,64 @@ import { Usuario, Perfil } from '../../../shared/models';
           <div *ngIf="formError()" class="alert alert-danger py-2 small">{{ formError() }}</div>
           <form [formGroup]="form" (ngSubmit)="saveForm()">
             <div class="row g-3">
-              <div class="col-6">
+              <!-- Usuario -->
+              <div class="col-12">
                 <label class="form-label fw-semibold">Usuario *</label>
                 <input type="text" class="form-control" formControlName="strNombreUsuario"
-                       [class.is-invalid]="isInvalid('strNombreUsuario')" />
-                <div class="invalid-feedback">Requerido (mínimo 3 caracteres)</div>
+                       [class.is-invalid]="isInvalid('strNombreUsuario')" 
+                       placeholder="Ej: juan.perez">
+                <div class="invalid-feedback">
+                  <span *ngIf="form.get('strNombreUsuario')?.hasError('required')">El usuario es requerido</span>
+                  <span *ngIf="form.get('strNombreUsuario')?.hasError('minlength')">Mínimo 3 caracteres</span>
+                  <span *ngIf="form.get('strNombreUsuario')?.hasError('maxlength')">Máximo 50 caracteres</span>
+                  <span *ngIf="form.get('strNombreUsuario')?.hasError('pattern')">Solo letras, números, punto y guión bajo</span>
+                  <span *ngIf="form.get('strNombreUsuario')?.hasError('noWhitespace')">No puede contener solo espacios</span>
+                </div>
               </div>
-              <div class="col-6">
+
+              <!-- Perfil -->
+              <div class="col-12">
                 <label class="form-label fw-semibold">Perfil *</label>
                 <select class="form-select" formControlName="idPerfil"
                         [class.is-invalid]="isInvalid('idPerfil')">
                   <option value="">Seleccionar...</option>
                   <option *ngFor="let p of perfilesList()" [value]="p.id">{{ p.strNombrePerfil }}</option>
                 </select>
-                <div class="invalid-feedback">Requerido</div>
+                <div class="invalid-feedback">Debe seleccionar un perfil</div>
               </div>
+
+              <!-- Contraseña -->
               <div class="col-12">
                 <label class="form-label fw-semibold">
                   {{ editingId() ? 'Nueva Contraseña (dejar vacío para no cambiar)' : 'Contraseña *' }}
                 </label>
                 <input type="password" class="form-control" formControlName="strPwd"
-                       [class.is-invalid]="isInvalid('strPwd')" />
-                <div class="invalid-feedback">Mínimo 6 caracteres</div>
+                       [class.is-invalid]="isInvalid('strPwd')"
+                       placeholder="Mínimo 6 caracteres">
+                <div class="invalid-feedback">
+                  <span *ngIf="form.get('strPwd')?.hasError('required')">La contraseña es requerida</span>
+                  <span *ngIf="form.get('strPwd')?.hasError('minlength')">Mínimo 6 caracteres</span>
+                  <span *ngIf="form.get('strPwd')?.hasError('maxlength')">Máximo 50 caracteres</span>
+                  <span *ngIf="form.get('strPwd')?.hasError('pattern')">Debe contener al menos una letra y un número</span>
+                </div>
               </div>
-              <div class="col-8">
-                <label class="form-label fw-semibold">Correo *</label>
+
+              <!-- Correo -->
+              <div class="col-12">
+                <label class="form-label fw-semibold">Correo Electrónico *</label>
                 <input type="email" class="form-control" formControlName="strCorreo"
-                       [class.is-invalid]="isInvalid('strCorreo')" />
-                <div class="invalid-feedback">Correo inválido</div>
+                       [class.is-invalid]="isInvalid('strCorreo')"
+                       placeholder="ejemplo@correo.com">
+                <div class="invalid-feedback">
+                  <span *ngIf="form.get('strCorreo')?.hasError('required')">El correo es requerido</span>
+                  <span *ngIf="form.get('strCorreo')?.hasError('email')">Ingrese un correo válido</span>
+                  <span *ngIf="form.get('strCorreo')?.hasError('maxlength')">Máximo 100 caracteres</span>
+                  <span *ngIf="form.get('strCorreo')?.hasError('pattern')">Formato de correo inválido</span>
+                </div>
               </div>
-              <div class="col-4">
+
+              <!-- Estado -->
+              <div class="col-12">
                 <label class="form-label fw-semibold">Estado</label>
                 <div class="form-check form-switch mt-2">
                   <input class="form-check-input" type="checkbox" id="estado"
@@ -255,17 +283,24 @@ import { Usuario, Perfil } from '../../../shared/models';
                   <label class="form-check-label small" for="estado">Activo</label>
                 </div>
               </div>
+
+              <!-- Teléfono -->
               <div class="col-12">
                 <label class="form-label fw-semibold">Número Celular</label>
-                <input type="text" class="form-control" formControlName="strNumeroCelular"
-                       placeholder="Opcional - 10 dígitos" />
-                <div class="invalid-feedback">Debe tener 10 dígitos</div>
+                <input type="tel" class="form-control" formControlName="strNumeroCelular"
+                       placeholder="10 dígitos (ej: 5512345678)"
+                       [class.is-invalid]="isInvalid('strNumeroCelular')">
+                <div class="invalid-feedback">
+                  <span *ngIf="form.get('strNumeroCelular')?.hasError('pattern')">Debe tener exactamente 10 dígitos</span>
+                </div>
               </div>
             </div>
-            <div class="d-flex gap-2 justify-content-end mt-3">
+
+            <div class="d-flex gap-2 justify-content-end mt-4">
               <button type="button" class="btn btn-secondary btn-sm" (click)="closeForm()">Cancelar</button>
-              <button type="submit" class="btn btn-primary btn-sm" [disabled]="saving()">
+              <button type="submit" class="btn btn-primary btn-sm" [disabled]="saving() || form.invalid">
                 <span *ngIf="saving()" class="spinner-border spinner-border-sm me-1"></span>
+                <i class="bi bi-save me-1"></i>
                 {{ editingId() ? 'Actualizar' : 'Guardar' }}
               </button>
             </div>
@@ -332,6 +367,23 @@ export class UsuarioComponent implements OnInit {
   form!: FormGroup;
   usuariosFiltrados = signal<Usuario[]>([]);
 
+  // Validador personalizado: No solo espacios
+  noWhitespaceValidator(control: AbstractControl): ValidationErrors | null {
+    const isWhitespace = (control.value || '').trim().length === 0;
+    return isWhitespace ? { noWhitespace: true } : null;
+  }
+
+  // Validador personalizado: Contraseña segura (letra + número)
+  passwordStrengthValidator(control: AbstractControl): ValidationErrors | null {
+    const value = control.value || '';
+    if (!value) return null;
+    
+    const hasLetter = /[a-zA-Z]/.test(value);
+    const hasNumber = /[0-9]/.test(value);
+    
+    return hasLetter && hasNumber ? null : { weakPassword: true };
+  }
+
   constructor(
     public usuarioService: UsuarioService,
     private perfilService: PerfilService,
@@ -349,12 +401,30 @@ export class UsuarioComponent implements OnInit {
 
   buildForm(editMode: boolean) {
     this.form = this.fb.group({
-      strNombreUsuario: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(50)]],
+      strNombreUsuario: ['', [
+        Validators.required,
+        Validators.minLength(3),
+        Validators.maxLength(50),
+        Validators.pattern(/^[a-zA-Z0-9._]+$/),
+        this.noWhitespaceValidator
+      ]],
       idPerfil: ['', [Validators.required]],
-      strPwd: ['', editMode ? [] : [Validators.required, Validators.minLength(6)]],
-      strCorreo: ['', [Validators.required, Validators.email, Validators.maxLength(100)]],
+      strPwd: ['', editMode ? [] : [
+        Validators.required,
+        Validators.minLength(6),
+        Validators.maxLength(50),
+        this.passwordStrengthValidator
+      ]],
+      strCorreo: ['', [
+        Validators.required,
+        Validators.email,
+        Validators.maxLength(100),
+        Validators.pattern(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)
+      ]],
       idEstadoUsuario: [true],
-      strNumeroCelular: ['', [Validators.pattern('^[0-9]{10}$')]]
+      strNumeroCelular: ['', [
+        Validators.pattern(/^[0-9]{10}$/)
+      ]]
     });
   }
 
@@ -399,6 +469,7 @@ export class UsuarioComponent implements OnInit {
   }
 
   onBuscar() { this.aplicarFiltros(); }
+  
   limpiarBusqueda() {
     this.terminoBusqueda = '';
     this.filtroEstado = '';
@@ -421,18 +492,18 @@ export class UsuarioComponent implements OnInit {
   }
 
   editUsuario(u: Usuario) {
-  this.editingId.set(u.id!);
-  this.formError.set('');
-  this.buildForm(true);
-  this.form.patchValue({
-    strNombreUsuario: u.strNombreUsuario,
-    idPerfil: u.idPerfil,
-    strCorreo: u.strCorreo,
-    idEstadoUsuario: u.idEstadoUsuario === true,  // Asegurar boolean
-    strNumeroCelular: u.strNumeroCelular || ''
-  });
-  this.showForm.set(true);
-}
+    this.editingId.set(u.id!);
+    this.formError.set('');
+    this.buildForm(true);
+    this.form.patchValue({
+      strNombreUsuario: u.strNombreUsuario,
+      idPerfil: u.idPerfil,
+      strCorreo: u.strCorreo,
+      idEstadoUsuario: u.idEstadoUsuario === true,
+      strNumeroCelular: u.strNumeroCelular || ''
+    });
+    this.showForm.set(true);
+  }
 
   viewDetail(u: Usuario) { this.detailItem.set(u); }
   closeForm() { this.showForm.set(false); }
@@ -443,61 +514,57 @@ export class UsuarioComponent implements OnInit {
   }
 
   saveForm() {
-  this.form.markAllAsTouched();
-  if (this.form.invalid) {
-    const errors: string[] = [];
-    if (this.form.get('strNombreUsuario')?.errors) errors.push('Nombre de usuario inválido');
-    if (this.form.get('strCorreo')?.errors) errors.push('Correo electrónico inválido');
-    if (this.form.get('strNumeroCelular')?.errors) errors.push('Número celular debe tener 10 dígitos');
-    if (errors.length > 0) this.formError.set(errors.join(', '));
-    return;
-  }
-  
-  this.saving.set(true);
-  this.formError.set('');
-  
-  // Obtener valores del formulario
-  const formValues = this.form.value;
-  
-  // Construir objeto para enviar
-  const payload: any = {
-    strNombreUsuario: formValues.strNombreUsuario,
-    idPerfil: formValues.idPerfil,
-    strCorreo: formValues.strCorreo,
-    idEstadoUsuario: formValues.idEstadoUsuario ? 1 : 0,  // Convertir a número
-    strNumeroCelular: formValues.strNumeroCelular || ''
-  };
-  
-  // Incluir contraseña solo si se proporcionó (para edición) o siempre para nuevo
-  if (formValues.strPwd && formValues.strPwd.trim() !== '') {
-    payload.strPwd = formValues.strPwd;
-  } else if (!this.editingId()) {
-    // Si es nuevo usuario y no hay contraseña, error
-    this.formError.set('La contraseña es requerida');
-    this.saving.set(false);
-    return;
-  }
-  
-  console.log('Enviando payload:', payload);
-  
-  const req = this.editingId()
-    ? this.usuarioService.update(this.editingId()!, payload)
-    : this.usuarioService.create(payload);
-
-  req.subscribe({
-    next: () => {
-      this.saving.set(false);
-      this.closeForm();
-      this.loadPage(this.currentPage());
-      alert(this.editingId() ? '✅ Usuario actualizado correctamente' : '✅ Usuario creado correctamente');
-    },
-    error: (err) => {
-      this.saving.set(false);
-      console.error('Error:', err);
-      this.formError.set(err.error?.message || 'Error al guardar el usuario');
+    this.form.markAllAsTouched();
+    if (this.form.invalid) {
+      const errors: string[] = [];
+      if (this.form.get('strNombreUsuario')?.errors) errors.push('Nombre de usuario inválido');
+      if (this.form.get('strCorreo')?.errors) errors.push('Correo electrónico inválido');
+      if (this.form.get('strNumeroCelular')?.errors) errors.push('Número celular debe tener 10 dígitos');
+      if (errors.length > 0) this.formError.set(errors.join(', '));
+      return;
     }
-  });
-}
+    
+    this.saving.set(true);
+    this.formError.set('');
+    
+    const formValues = this.form.value;
+    
+    const payload: any = {
+      strNombreUsuario: formValues.strNombreUsuario.trim(),
+      idPerfil: formValues.idPerfil,
+      strCorreo: formValues.strCorreo.trim().toLowerCase(),
+      idEstadoUsuario: formValues.idEstadoUsuario ? 1 : 0,
+      strNumeroCelular: formValues.strNumeroCelular || ''
+    };
+    
+    if (formValues.strPwd && formValues.strPwd.trim() !== '') {
+      payload.strPwd = formValues.strPwd;
+    } else if (!this.editingId()) {
+      this.formError.set('La contraseña es requerida');
+      this.saving.set(false);
+      return;
+    }
+    
+    console.log('Enviando payload:', payload);
+    
+    const req = this.editingId()
+      ? this.usuarioService.update(this.editingId()!, payload)
+      : this.usuarioService.create(payload);
+
+    req.subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.closeForm();
+        this.loadPage(this.currentPage());
+        alert(this.editingId() ? '✅ Usuario actualizado correctamente' : '✅ Usuario creado correctamente');
+      },
+      error: (err) => {
+        this.saving.set(false);
+        console.error('Error:', err);
+        this.formError.set(err.error?.message || 'Error al guardar el usuario');
+      }
+    });
+  }
 
   deleteUsuario(u: Usuario) {
     if (!confirm(`¿Eliminar al usuario "${u.strNombreUsuario}"?`)) return;

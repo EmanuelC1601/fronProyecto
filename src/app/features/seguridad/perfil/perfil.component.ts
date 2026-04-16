@@ -1,6 +1,6 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { NgFor, NgIf } from '@angular/common';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors } from '@angular/forms';
 import { BreadcrumbComponent } from '../../../shared/components/breadcrumb/breadcrumb.component';
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
 import { PerfilService } from '../../../core/services/perfil.service';
@@ -114,9 +114,9 @@ import { Perfil } from '../../../shared/models';
       </div>
     </div>
 
-    <!-- Modal formulario ACTUALIZADO con descripción -->
+    <!-- Modal formulario con validaciones -->
     <div *ngIf="showForm()" class="modal-backdrop-custom">
-      <div class="card shadow-lg" style="width:480px;">
+      <div class="card shadow-lg" style="width:500px;">
         <div class="card-header d-flex justify-content-between align-items-center">
           <span class="fw-bold">
             <i class="bi bi-person-badge me-2 text-primary"></i>
@@ -135,12 +135,18 @@ import { Perfil } from '../../../shared/models';
               <label class="form-label fw-semibold">Nombre del Perfil *</label>
               <input type="text" class="form-control"
                      formControlName="strNombrePerfil"
-                     placeholder="Nombre del perfil"
+                     placeholder="Ej: Administrador, Usuario, Invitado"
                      [class.is-invalid]="isInvalid('strNombrePerfil')" />
-              <div class="invalid-feedback">Campo requerido.</div>
+              <div class="invalid-feedback">
+                <span *ngIf="form.get('strNombrePerfil')?.hasError('required')">El nombre del perfil es requerido</span>
+                <span *ngIf="form.get('strNombrePerfil')?.hasError('minlength')">Mínimo 3 caracteres</span>
+                <span *ngIf="form.get('strNombrePerfil')?.hasError('maxlength')">Máximo 50 caracteres</span>
+                <span *ngIf="form.get('strNombrePerfil')?.hasError('pattern')">Solo letras, números, espacios y guiones</span>
+                <span *ngIf="form.get('strNombrePerfil')?.hasError('noWhitespace')">No puede contener solo espacios</span>
+              </div>
             </div>
 
-            <!-- Perfil Administrador con mensaje de ayuda -->
+            <!-- Perfil Administrador -->
             <div class="mb-3">
               <div class="form-check form-switch">
                 <input class="form-check-input" type="checkbox" id="bitAdmin"
@@ -161,14 +167,15 @@ import { Perfil } from '../../../shared/models';
               <textarea class="form-control"
                         rows="3"
                         formControlName="strDescripcion"
-                        placeholder="Descripción opcional del perfil"
+                        placeholder="Descripción opcional del perfil (máximo 255 caracteres)"
                         [class.is-invalid]="isInvalid('strDescripcion')"
                         (input)="onDescripcionInput($event)"></textarea>
-              <div class="form-text text-muted small">
-                Máximo 255 caracteres. {{ descripcionLength() }}/255
+              <div class="form-text text-muted small d-flex justify-content-between">
+                <span><i class="bi bi-info-circle"></i> Descripción opcional</span>
+                <span [class.text-danger]="descripcionLength() > 255">{{ descripcionLength() }}/255</span>
               </div>
               <div *ngIf="isInvalid('strDescripcion')" class="invalid-feedback">
-                La descripción no puede exceder 255 caracteres.
+                <span *ngIf="form.get('strDescripcion')?.hasError('maxlength')">La descripción no puede exceder 255 caracteres</span>
               </div>
             </div>
 
@@ -176,8 +183,9 @@ import { Perfil } from '../../../shared/models';
               <button type="button" class="btn btn-secondary btn-sm" (click)="closeForm()">
                 Cancelar
               </button>
-              <button type="submit" class="btn btn-primary btn-sm" [disabled]="saving()">
+              <button type="submit" class="btn btn-primary btn-sm" [disabled]="saving() || form.invalid">
                 <span *ngIf="saving()" class="spinner-border spinner-border-sm me-1"></span>
+                <i class="bi bi-save me-1"></i>
                 {{ editingId() ? 'Actualizar' : 'Guardar' }}
               </button>
             </div>
@@ -215,6 +223,12 @@ export class PerfilComponent implements OnInit {
 
   form!: FormGroup;
 
+  // Validador personalizado: No solo espacios
+  noWhitespaceValidator(control: AbstractControl): ValidationErrors | null {
+    const isWhitespace = (control.value || '').trim().length === 0;
+    return isWhitespace ? { noWhitespace: true } : null;
+  }
+
   constructor(
     private perfilService: PerfilService,
     private authService: AuthService,
@@ -230,21 +244,31 @@ export class PerfilComponent implements OnInit {
 
   buildForm() {
     this.form = this.fb.group({
-      strNombrePerfil:  ['', Validators.required],
+      strNombrePerfil: ['', [
+        Validators.required,
+        Validators.minLength(3),
+        Validators.maxLength(50),
+        Validators.pattern(/^[a-zA-ZáéíóúñÑÁÉÍÓÚ\s-]+$/),
+        this.noWhitespaceValidator
+      ]],
       bitAdministrador: [false],
-      strDescripcion:   ['', [Validators.maxLength(255)]]  // Validación de 255 caracteres
+      strDescripcion: ['', [
+        Validators.maxLength(255)
+      ]]
     });
   }
 
   onDescripcionInput(event: Event) {
     const textarea = event.target as HTMLTextAreaElement;
-    this.descripcionLength.set(textarea.value.length);
+    let value = textarea.value;
     
-    // Si excede 255, truncar
-    if (textarea.value.length > 255) {
-      this.form.patchValue({ strDescripcion: textarea.value.slice(0, 255) });
-      this.descripcionLength.set(255);
+    // Limitar a 255 caracteres
+    if (value.length > 255) {
+      value = value.slice(0, 255);
+      this.form.patchValue({ strDescripcion: value });
     }
+    
+    this.descripcionLength.set(value.length);
   }
 
   loadPage(page: number) {
@@ -276,14 +300,22 @@ export class PerfilComponent implements OnInit {
   editPerfil(p: Perfil) {
     this.editingId.set(p.id!);
     this.formError.set('');
-    this.form.patchValue(p);
+    this.form.patchValue({
+      strNombrePerfil: p.strNombrePerfil,
+      bitAdministrador: p.bitAdministrador,
+      strDescripcion: p.strDescripcion || ''
+    });
     this.descripcionLength.set(p.strDescripcion?.length || 0);
     this.showForm.set(true);
   }
 
-  viewDetail(p: Perfil) { this.detailItem.set(p); }
+  viewDetail(p: Perfil) { 
+    this.detailItem.set(p); 
+  }
 
-  closeForm() { this.showForm.set(false); }
+  closeForm() { 
+    this.showForm.set(false); 
+  }
 
   isInvalid(field: string): boolean {
     const c = this.form.get(field);
@@ -292,12 +324,33 @@ export class PerfilComponent implements OnInit {
 
   saveForm() {
     this.form.markAllAsTouched();
-    if (this.form.invalid) return;
+    
+    if (this.form.invalid) {
+      // Mostrar mensaje específico del error
+      const nombreControl = this.form.get('strNombrePerfil');
+      if (nombreControl?.hasError('required')) {
+        this.formError.set('El nombre del perfil es requerido');
+      } else if (nombreControl?.hasError('minlength')) {
+        this.formError.set('El nombre del perfil debe tener al menos 3 caracteres');
+      } else if (nombreControl?.hasError('maxlength')) {
+        this.formError.set('El nombre del perfil no puede exceder 50 caracteres');
+      } else if (nombreControl?.hasError('pattern')) {
+        this.formError.set('El nombre del perfil solo puede contener letras, espacios y guiones');
+      } else if (nombreControl?.hasError('noWhitespace')) {
+        this.formError.set('El nombre del perfil no puede contener solo espacios');
+      } else {
+        this.formError.set('Por favor complete los campos requeridos correctamente');
+      }
+      return;
+    }
+    
     this.saving.set(true);
     this.formError.set('');
 
     const data = this.form.value as Perfil;
-    const id   = this.editingId();
+    // Trim al nombre
+    data.strNombrePerfil = data.strNombrePerfil.trim();
+    const id = this.editingId();
 
     const req = id
       ? this.perfilService.update(id, data)
@@ -311,7 +364,7 @@ export class PerfilComponent implements OnInit {
       },
       error: err => {
         this.saving.set(false);
-        this.formError.set(err.error?.message || 'Error al guardar');
+        this.formError.set(err.error?.message || 'Error al guardar el perfil');
       }
     });
   }
@@ -320,7 +373,7 @@ export class PerfilComponent implements OnInit {
     if (!confirm(`¿Eliminar el perfil "${p.strNombrePerfil}"?`)) return;
     this.perfilService.delete(p.id!).subscribe({
       next: () => this.loadPage(this.currentPage()),
-      error: err => alert(err.error?.message || 'Error al eliminar')
+      error: err => alert(err.error?.message || 'Error al eliminar el perfil')
     });
   }
 }
